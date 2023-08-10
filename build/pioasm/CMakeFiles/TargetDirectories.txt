@@ -1,0 +1,3 @@
+/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/pioasm/CMakeFiles/pioasm.dir
+/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/pioasm/CMakeFiles/edit_cache.dir
+/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/pioasm/CMakeFiles/rebuild_cache.dir

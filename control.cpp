@@ -1,6 +1,6 @@
 #include "control.hpp"
 
-//Sensor data
+//Sensor data 1
 float Ax,Ay,Az,Wp,Wq,Wr,Mx,My,Mz,Mx0,My0,Mz0,Mx_ave,My_ave,Mz_ave;
 float Acc_norm=0.0;
 
@@ -40,12 +40,50 @@ Matrix<float, 6, 6> R;// = MatrixXf::Identity(6, 6)*0.0001;
 Matrix<float, 7 ,6> G;
 Matrix<float, 3 ,1> Beta;
 
+//Auto_fly
+uint64_t count_up = 0;
+float auto_mode_count = 0;
+float start_time;
+float current_time;
+float func_time;
+float z_acc;
+float base_dis_count = 0;
+uint16_t Range;
+int8_t status;
+uint8_t Temp2;
+uint8_t Temp;
+uint8_t IntPol;
+uint8_t val = 0;
+uint8_t range_gbuf[16];
+float range_flag = 0;
+uint16_t altitude_count = 0;
+float stick;
+float last_stick;
+float hov_distance_flag = 0;
+float auto_mode = 0;
+float ideal;
+float takeoff_flag = 0;
+float landing_flag = 0;
+float initialize_flag =1;
+float hovering_flag = 0;
+float hove_distance;
+float hove_time = 0.0;
+float flying_mode = 0;
+float input= 0;
+Matrix<float, 3 ,3> lotate_mat = MatrixXf::Zero(3,3);
+float f_distance = 0;
+float f_distance2 = 0;
+float f_distance3 = 0;
+float lotated_distance = 0;
+Matrix<float, 3 ,1> distance_mat = MatrixXf::Zero(3,1);
+Matrix<float, 3 ,1> f_distance_mat = MatrixXf::Zero(3,1);
+
 //Log
 uint16_t LogdataCounter=0;
 uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
-const uint8_t DATANUM=38; //Log Data Number
+const uint8_t DATANUM=45; //Log Data Number
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -76,6 +114,15 @@ void motor_stop(void);
 uint8_t lock_com(void);
 uint8_t logdata_out_com(void);
 void printPQR(void);
+void Auto_fly(void);
+void Auto_fly_initialize(void);
+void altitude_rate_control(void);
+void Auto_takeoff(void);
+void Auto_landing(void);
+void Hovering(void);
+float lotate_altitude(float l_distance);
+void lotate_altitude_init(float Theta,float Psi,float Phi);
+void test_Hovering(void);
 
 #define AVERAGE 2000
 #define KALMANWAIT 6000
@@ -358,14 +405,185 @@ void motor_stop(void)
   set_duty_rl(0.0);
 }
 
+void lotate_altitude_init(float Theta,float Psi,float Phi){
+  lotate_mat(0,0) = cos(Theta)*cos(Psi);
+  lotate_mat(0,1) = -sin(Psi)*cos(Theta);
+  lotate_mat(0,2) = sin(Theta);
+  lotate_mat(1,0) = (sin(Phi)*sin(Theta)*cos(Psi))+(cos(Phi)*sin(Psi));
+  lotate_mat(1,1) = (-sin(Phi)*sin(Theta)*sin(Psi)) + (cos(Phi) * cos(Psi));
+  lotate_mat(1,2) = -sin(Phi)*cos(Theta);
+  lotate_mat(2,0) = (-sin(Theta)*cos(Phi)*cos(Psi)) + (sin(Phi)*sin(Psi));
+  lotate_mat(2,1) = (sin(Theta)*cos(Phi)*sin(Psi)) + (sin(Phi)*cos(Psi));
+  lotate_mat(2,2) = cos(Phi)*cos(Theta);
+}
+
+float lotate_altitude(float l_distance){
+  // distance_mat(0,0) = 0;
+  // distance_mat(0,1) = 0;
+  distance_mat(0,2) = l_distance;
+  f_distance_mat = lotate_mat * distance_mat;
+  f_distance = f_distance_mat(0,1);
+  f_distance2 = f_distance_mat(0,2);
+  f_distance3 = f_distance_mat(0,3);
+
+  return f_distance;
+}
+
+// //自動離着陸モード
+// void Auto_fly(void){
+//   test_Hovering();
+//   // if (flying_mode == 1){
+//   //   Auto_takeoff();
+//   // }
+
+//   // else if(flying_mode == 2){
+//   //   Hovering();
+//   // }
+
+//   // else if (flying_mode == 3){
+//   //   Auto_landing();
+//   // }
+
+// }
+
+// void test_Hovering(void){
+//   u = Kalman_PID(lotated_distance,hove_distance);
+// }
+
+// //ホバリング
+// void Hovering(void){
+//   //実験なので4秒
+//   //本番はゴールを見つけたら着陸モード
+//   if (hove_time < 4.0)
+//   {
+//     u = Kalman_PID(lotated_distance,hove_distance);
+//     hove_time + 0.03;
+//   }
+//   else{
+//     // hovering_flag = 0;
+//     // landing_flag = 1;
+//     flying_mode = 3;
+//   }
+// }
+
+// //自動着陸
+// void Auto_landing(void){
+//   ideal = lotated_distance - 3;//高度の目標値更新のコード
+//   u = Kalman_PID(lotated_distance,ideal);
+//   if (lotated_distance < 90)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+//   {
+//     motor_stop();
+//     // landing_flag = 0;
+//     flying_mode = 4;
+//   }
+// }
+
+// //自動離陸
+// void Auto_takeoff(void){
+//   ideal = lotated_distance + 3;
+//   u = Kalman_PID(lotated_distance,ideal);
+//   if (lotated_distance >= 400)
+//   {
+//     // takeoff_flag = 0;
+//     // hovering_flag = 1;
+//     hove_distance = lotated_distance;
+//     flying_mode = 2;
+//   }
+// }
+
 void rate_control(void)
 {
   float p_rate, q_rate, r_rate;
   float p_ref, q_ref, r_ref;
   float p_err, q_err, r_err;
 
+  //  if (flying_mode == 0){
+  //   stick = Chdata[2];
+  //   flying_mode = 1;
+  // }
+
   //Read Sensor Value
   sensor_read();
+
+  // lotate_altitude_init(Theta,Psi,Phi);
+  // //lotate_altitudeもfloat型に変換して計算しているか確認
+  // lotated_distance = lotate_altitude(distance);
+
+  // auto_mode = 0;
+  // hov_distance_flag = 0;
+  // last_stick = stick;
+
+  // if((Chdata[2]-last_stick) < 13 || (Chdata[2]-last_stick) > 13)
+  // {
+  //   motor_stop();
+  // }
+
+  //通常モード
+  // if (Chdata[4]<(CH5MAX+CH5MIN)*0.5){
+  //   auto_mode = 1;
+  //   if (base_dis_count == 0){
+  //     stick = Chdata[2];
+  //     base_dis_count = 1;
+  //   }
+  //   // //スティック入力を理想値とする。スティック入力の値の変更が無ければ、その値の高度を保つ
+  //   // if (Chdata[2] >= 690 && Chdata[2] <= 715)
+  //   // {
+  //   //   ideal = lotated_distance;
+  //   //   u = Kalman_PID(lotated_distance,ideal);
+  //   // }
+  //   // else if(Chdata[2] < 690)
+  //   // {
+  //   //   if(Chdata[2] >= CH3MIN && Chdata[2] <= 350){
+  //   //     motor_stop();
+  //   //   }
+  //   //   ideal = lotated_distance - 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
+  //   //   u = Kalman_PID(lotated_distance,ideal);
+  //   // }
+  //   // else if(Chdata[2] > 715)
+  //   // {
+  //   //   ideal = lotated_distance + 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
+  //   //   u = Kalman_PID(lotated_distance,ideal);
+  //   // }
+
+  //   //高度を保つ処理
+  //   if(Chdata[2] >= (stick+15) && Chdata[2] >= (stick-15)){
+  //     //ideal = lotated_distance;
+  //     ideal = distance;
+  //     u = Kalman_PID(distance,ideal);
+  //   }
+  //   //スティックの変化量に比例して高度上昇の処理
+  //   else if (Chdata[2] > stick + 15)
+  //   {
+  //     ideal = distance + 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
+  //     u = Kalman_PID(distance,ideal);
+  //   }
+  //   //スティックの変化量に比例して高度を下げる処理
+  //   else if (Chdata[2] < stick + 15)
+  //   {
+  //     if(Chdata[2] >= CH3MIN && Chdata[2] <= 350){     
+  //       motor_stop();
+  //     }
+
+  //     ideal = distance - 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
+  //     u = Kalman_PID(distance,ideal);
+  //   }
+    
+  // }
+  // else {
+  //   base_dis_count = 0;
+  // }
+
+  // ideal = (float)distance - 0.1 * (2.0*(500-(float)CH3MIN)/((float)CH3MAX-(float)CH3MIN) - 1.0f);
+  // ideal = 5;
+  // input = Kalman_PID((float)distance,(float)distance);
+
+
+
+  // altitude_count += 1;
+  // if(altitude_count == 21){
+  //   get_Altitude();
+  //   altitude_count = 0;
+  // }
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -383,6 +601,40 @@ void rate_control(void)
   r_ref = Rref;
   T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
 
+  if(Chdata[4] > (CH5MAX + CH5MIN)*0.5){
+    auto_mode =1;
+  }
+  else{
+    auto_mode =0;
+    auto_mode_count = 0;
+    T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+  }
+
+  if (auto_mode ==1){
+
+    if(auto_mode_count ==0){
+      auto_mode_count = 1;
+      //ideal = Chada[2]
+      ideal = lotated_distance;
+    }
+
+    input = Kalman_PID(lotated_distance,ideal,z_acc);
+    // T_ref = 4.25 + (input/11.1);
+    T_ref = 4.25 - (input/11.1);
+    //釣り合いのT = 0.5と仮定
+    // T_ref = 0.6 * BATTERY_VOLTAGE*( 0.5 - (input*0.001));
+    // T_ref = 0.6 * BATTERY_VOLTAGE*input*0.001;
+    //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+  }
+
+
+  // if (auto_mode == 0){
+  //   T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+  // }
+  // else if(auto_mode ==1){
+  //     T_ref = 0.6 * BATTERY_VOLTAGE*u;//値を１の間にするために0.6をかける
+  // }
+
   //Error
   p_err = p_ref - p_rate;
   q_err = q_ref - q_rate;
@@ -397,10 +649,14 @@ void rate_control(void)
   // 1250/11.1=112.6
   // 1/11.1=0.0901
   
-  FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
-  FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
-  RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
-  RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
+  // FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
+  // FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
+  // RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
+  // RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
+    FR_duty = (T_ref)*0.0901;
+    FL_duty = (T_ref )*0.0901;
+    RR_duty = (T_ref)*0.0901;
+    RL_duty = (T_ref)*0.0901;
   //FR_duty = (T_ref)*0.0901;
   //FL_duty = (T_ref)*0.0901;
   //RR_duty = (T_ref)*0.0901;
@@ -532,13 +788,6 @@ void angle_control(void)
   }
 }
 
-void linetrace(void)
-{
-  //For line trace function
-  
-}
-
-
 void logging(void)
 {  
   //Logging
@@ -593,8 +842,13 @@ void logging(void)
       Logdata[LogdataCounter++]=Rbias;                    //36
       Logdata[LogdataCounter++]=T_ref;                    //37
       Logdata[LogdataCounter++]=Acc_norm;                 //38
-
-   
+      Logdata[LogdataCounter++]=distance;                 //39
+      Logdata[LogdataCounter++]=mu_Yn_est(1,0);           //40
+      Logdata[LogdataCounter++]=mu_Yn_est(0,0);           //41
+      Logdata[LogdataCounter++]=FR_duty;                   //42
+      Logdata[LogdataCounter++]=FL_duty;                    //43
+      Logdata[LogdataCounter++]=RR_duty;                  //44
+      Logdata[LogdataCounter++]=RL_duty;                  //45
     }
     else Logflag=2;
   }
@@ -729,6 +983,93 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
   Mx/=mag_norm;
   My/=mag_norm;
   Mz/=mag_norm;
+ 
+  // start_time = time_us_64();
+  if(isDataReady == 0)
+  {
+    Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
+  }
+  else if (isDataReady == 1)
+  {
+    //data_count = data_count + 1;
+    isDataReady = 0;
+    Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
+    Status = VL53L1X_GetDistance(dev,&distance);
+    Status = VL53L1X_ClearInterrupt(dev);
+    // z_acc  = Az-9.80665;
+    //何故 gを引くのか
+    z_acc = Az - 9.76548;
+    lotate_altitude_init(Theta,Psi,Phi);
+    lotated_distance = lotate_altitude(distance);
+    // z_acc  = Az-9.80665;
+    //input = Kalman_PID(lotated_distance,z_acc);
+  }
+  
+  // current_time = time_us_64();
+  // func_time = (current_time - start_time)/1000000.0;
+  // count_up = count_up + 1;
+
+
+  // if(range_flag==0)
+  // {
+  //   //write_byte_data_at(VL53L0X_REG_SYSRANGE_START, 0x01);
+  //   VL53L1_WrByte(dev,VL53L0X_REG_SYSRANGE_START,0x01);
+  //   range_flag = 1;
+  // }
+  //val = read_byte_data_at(VL53L0X_REG_RESULT_RANGE_STATUS);
+  // val = VL53L1_RdByte(dev,VL53L0X_REG_RESULT_RANGE_STATUS);
+
+  // VL53L1_RdByte(dev,VL53L0X_REG_RESULT_RANGE_STATUS,&val);
+  // if (val & 0x01)
+  // {
+  //   range_flag = 0;
+  //read_block_data_at(dev,0x14, 12,&range_gbuf);
+  // Range = makeuint16(range_gbuf[11], range_gbuf[10]);
+  // } 
+
+  // altitude_count = altitude_count + 1;
+  // if(altitude_count == 20){
+  //   altitude_count = 0;
+  //   if(isDataReady == 0)
+  //   {
+  //     Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
+  //     // uint8_t Temp;
+  //     // uint8_t IntPol;
+  //     // Temp = 0;
+  //     // IntPol = 0;
+
+  //     //status |= VL53L1X_GetInterruptPolarity(dev, &IntPol);
+  //     //VL53L1X_GetInterruptPolarityの処理
+  //     // uint8_t Temp2;
+
+  //     // status |= VL53L1_RdByte(dev, GPIO_HV_MUX__CTRL, &Temp2);
+  //     // Temp2 = Temp2 & 0x10;
+  //     // IntPol = !(Temp2>>4);
+  //     //printf("Temp(getInterrupt) : %d\n",pInterruptPolarity);
+  //     //ここまでVL53L1X_GetInterruptPolarityの処理
+
+  //     //status |= VL53L1_RdByte(dev, GPIO__TIO_HV_STATUS, &Temp);
+  //     /* Read in the register to check if a new value is available */
+  //     //printf("status (CheckForDataReady) : %d\n" , status);
+  //     //printf("Temp and IntPol : %d , %d \n", (Temp&1),IntPol);
+  //     // if (status == 0){
+  //     //   if ((Temp & 1) == IntPol)
+  //     //     isDataReady = 1;
+  //     //   else
+  //     //     isDataReady = 0;
+  //     // }
+  //   }
+  //   else if (isDataReady == 1)
+  //   {
+  //     //data_count = data_count + 1;
+  //     isDataReady = 0;
+  //     Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
+  //     Status = VL53L1X_GetDistance(dev,&distance);
+  //     Status = VL53L1X_ClearInterrupt(dev);
+  //     // z_acc  = Az;
+  //     // input = Kalman_PID((float)distance,Ax);
+  //   }
+  // }
 }
 
 void variable_init(void)
@@ -737,12 +1078,12 @@ void variable_init(void)
   Xe << 1.00, 0.0, 0.0, 0.0,0.0,0.0, 0.0;
   Xp =Xe;
 
-  Q <<  6.0e-9, 0.0    , 0.0    ,  0.0    , 0.0    , 0.0   ,
-        0.0   , 5.0e-9 , 0.0    ,  0.0    , 0.0    , 0.0   ,
-        0.0   , 0.0    , 2.8e-9 ,  0.0    , 0.0    , 0.0   ,
-        0.0   , 0.0    , 0.0    ,  5.0e-9 , 0.0    , 0.0   ,
-        0.0   , 0.0    , 0.0    ,  0.0    , 5.0e-9 , 0.0   ,
-        0.0   , 0.0    , 0.0    ,  0.0    , 0.0    , 5.0e-9;
+  Q <<  6.0e-5, 0.0    , 0.0    ,  0.0    , 0.0    , 0.0   ,
+        0.0   , 5.0e-5 , 0.0    ,  0.0    , 0.0    , 0.0   ,
+        0.0   , 0.0    , 2.8e-5 ,  0.0    , 0.0    , 0.0   ,
+        0.0   , 0.0    , 0.0    ,  5.0e-5 , 0.0    , 0.0   ,
+        0.0   , 0.0    , 0.0    ,  0.0    , 5.0e-5 , 0.0   ,
+        0.0   , 0.0    , 0.0    ,  0.0    , 0.0    , 5.0e-5;
 
   R <<  1.701e0, 0.0     , 0.0     , 0.0   , 0.0   , 0.0   ,
         0.0     , 2.799e0, 0.0     , 0.0   , 0.0   , 0.0   ,
@@ -758,6 +1099,8 @@ void variable_init(void)
          0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 
          0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 
          0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+  
+  G=G*0.01;
 
   Beta << 0.0, 0.0, 0.0;
   

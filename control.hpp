@@ -11,6 +11,7 @@
 #include "ekf.hpp"
 #include <math.h>
 
+typedef unsigned char byte;
 using Eigen::MatrixXd;
 using Eigen::MatrixXf;
 using Eigen::Matrix;
@@ -32,7 +33,16 @@ void log_output(void);
 //グローバル変数
 extern uint8_t LockMode;
 extern volatile uint8_t Logoutputflag;
-
+extern float ideal;
+extern float input;
+extern float lotated_distance;
+extern float f_distance;
+extern float f_distance2;
+extern float f_distance3;
+extern float z_acc;
+extern float func_time;
+extern float T_ref;
+extern uint64_t count_up;
 class PID
 {
   private:
