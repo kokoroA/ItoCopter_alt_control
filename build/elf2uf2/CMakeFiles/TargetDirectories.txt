@@ -1,5 +1,0 @@
-/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/elf2uf2/CMakeFiles/elf2uf2.dir
-/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/elf2uf2/CMakeFiles/edit_cache.dir
-/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/elf2uf2/CMakeFiles/rebuild_cache.dir
-/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/elf2uf2/boot_uf2_headers/CMakeFiles/edit_cache.dir
-/Users/kokoro/Documents/drone_project/pico/pico-sdk/ItoCopter_alt_control/build/elf2uf2/boot_uf2_headers/CMakeFiles/rebuild_cache.dir
