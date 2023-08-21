@@ -54,14 +54,17 @@ float ie = 0;
 float de_v = 0;
 float ie_v = 0;
 float observe_y;
-float Kp = 1.5;
-float Ki = 500;
+// float Kp = 0.2;
+// float Ki = 900;
+// float Kd = 0;
+// float Kp_v = 0.2;
+// float Ki_v = 900;
+// float Kd_v = 0;
+float Kp = 1;
+float Ki = 900;
 float Kd = 0;
-// float Kp_v = 6.5 * 10e-6;
-// float Ki_v = 10;
-// float Kd_v = 0.0594;
-float Kp_v = 1.5;
-float Ki_v = 500;
+float Kp_v = 0.08;
+float Ki_v = 300;
 float Kd_v = 0;
 float u = 0;
 float u_v = 0;
@@ -136,7 +139,7 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
     return 0;
 }
 
-float Kalman_PID(float observe_y,float target,float Ax)
+float Kalman_PID(float observe_y,float Ax)
 // float Kalman_PID(float observe_y,float Ax)
 {
     yn_mat(0,0) = observe_y;
@@ -181,8 +184,36 @@ float Kalman_PID(float observe_y,float target,float Ax)
     // r = 0;
     // error = r - mu_Yn_est(1,0);
 
+    // // error = target - mu_Yn_est(1,0);
+    // error = mu_Yn_est(1,0) - target ;
+    // integral = integral + (h_kalman * (error + last_error)) / (2 * Ki);
+    // differential = (((2 * eta * Kd - h_kalman) * differential) / (2 * eta * Kd + h_kalman)) + ((2 * Kd) * (error - last_error)) / (2 * eta * Kd + h_kalman);
+    // // de = (error - last_error)/Control_T;
+    // // ie = ie + ((error + last_error)*(Control_T/2));
+    // // u_n(0,0)= (Kp*error) + (Ki*ie) + (Kd*de);
+    // u_n(0,0) = Kp * (error + integral + differential);
+    // u = u_n(0,0);
+
+    // // //PID for velocity
+    // // //rが理想値
+    // error_v = u - mu_Yn_est(0,0);
+    // //error_v = mu_Yn_est(0,0) - u;
+    // integral_v = integral_v + (h_kalman * (error_v + last_error_v)) / (2 * Ki_v);
+    // differential_v = (((2 * eta * Kd_v - h_kalman) * differential) / (2 * eta * Kd_v + h_kalman)) + ((2 * Kd_v) * (error_v - last_error_v)) / (2 * eta * Kd_v + h_kalman);
+    // // de_v = (error_v - last_error_v)/Control_T;
+    // // ie_v = ie_v + ((error_v + last_error_v)*(Control_T/2));
+    // // u_n_v(0,0)= (Kp_v*error_v) + (Ki_v*ie_v) + (Kd_v*de_v);
+    // u_n_v(0,0) = Kp_v * (error_v + integral_v + differential_v);
+    // u_v = u_n_v(0,0);
+
+    // return u_v;
+    // return mu_Yn_est(1,0);
+    return 1;
+}
+
+float alt_PID(float ref_alt){
     // error = target - mu_Yn_est(1,0);
-    error = mu_Yn_est(1,0) - target ;
+    error = mu_Yn_est(1,0) - ref_alt ;
     integral = integral + (h_kalman * (error + last_error)) / (2 * Ki);
     differential = (((2 * eta * Kd - h_kalman) * differential) / (2 * eta * Kd + h_kalman)) + ((2 * Kd) * (error - last_error)) / (2 * eta * Kd + h_kalman);
     // de = (error - last_error)/Control_T;
@@ -204,7 +235,6 @@ float Kalman_PID(float observe_y,float target,float Ax)
     u_v = u_n_v(0,0);
 
     return u_v;
-    // return mu_Yn_est(1,0);
 }
 
 void Kalman_init(void){

@@ -85,7 +85,8 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
 //                     Matrix<float, 2, 1> &K,
 //                     Matrix<float, 1,1> &yn_mat,
 //                     float &error,float &r,float &last_error,float &Control_T,float &de,float &ie);
-float Kalman_PID(float observe_y,float target,float Ax);
+float Kalman_PID(float observe_y,float Ax);
+float alt_PID(float ref_alt);
 // float Kalman_PID(float observe_y,float Ax);
 void Kalman_init(void);
 void Kalman_com(void);

@@ -83,7 +83,7 @@ uint16_t LogdataCounter=0;
 uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
-const uint8_t DATANUM=45; //Log Data Number
+const uint8_t DATANUM=46; //Log Data Number
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -429,67 +429,67 @@ float lotate_altitude(float l_distance){
   return f_distance;
 }
 
-// //自動離着陸モード
-// void Auto_fly(void){
-//   test_Hovering();
-//   // if (flying_mode == 1){
-//   //   Auto_takeoff();
-//   // }
+//自動離着陸モード
+void Auto_fly(void){
+  //test_Hovering();
+  if (flying_mode == 1){
+    Auto_takeoff();
+  }
 
-//   // else if(flying_mode == 2){
-//   //   Hovering();
-//   // }
+  else if(flying_mode == 2){
+    Hovering();
+  }
 
-//   // else if (flying_mode == 3){
-//   //   Auto_landing();
-//   // }
+  else if (flying_mode == 3){
+    Auto_landing();
+  }
 
-// }
+}
 
 // void test_Hovering(void){
 //   u = Kalman_PID(lotated_distance,hove_distance);
 // }
 
-// //ホバリング
-// void Hovering(void){
-//   //実験なので4秒
-//   //本番はゴールを見つけたら着陸モード
-//   if (hove_time < 4.0)
-//   {
-//     u = Kalman_PID(lotated_distance,hove_distance);
-//     hove_time + 0.03;
-//   }
-//   else{
-//     // hovering_flag = 0;
-//     // landing_flag = 1;
-//     flying_mode = 3;
-//   }
-// }
+//ホバリング
+void Hovering(void){
+  //実験なので4秒
+  //本番はゴールを見つけたら着陸モード
+  if (hove_time < 4.0)
+  {
+    u = alt_PID(hove_distance);
+    hove_time + 0.03;
+  }
+  else{
+    // hovering_flag = 0;
+    // landing_flag = 1;
+    flying_mode = 3;
+  }
+}
 
-// //自動着陸
-// void Auto_landing(void){
-//   ideal = lotated_distance - 3;//高度の目標値更新のコード
-//   u = Kalman_PID(lotated_distance,ideal);
-//   if (lotated_distance < 90)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
-//   {
-//     motor_stop();
-//     // landing_flag = 0;
-//     flying_mode = 4;
-//   }
-// }
+//自動着陸
+void Auto_landing(void){
+  ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
+  u = alt_PID(ideal);
+  if (mu_Yn_est(1,0) < 90)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+  {
+    motor_stop();
+    // landing_flag = 0;
+    flying_mode = 4;
+  }
+}
 
-// //自動離陸
-// void Auto_takeoff(void){
-//   ideal = lotated_distance + 3;
-//   u = Kalman_PID(lotated_distance,ideal);
-//   if (lotated_distance >= 400)
-//   {
-//     // takeoff_flag = 0;
-//     // hovering_flag = 1;
-//     hove_distance = lotated_distance;
-//     flying_mode = 2;
-//   }
-// }
+//自動離陸
+void Auto_takeoff(void){
+  ideal = mu_Yn_est(1,0) + 3;
+  u = alt_PID(ideal);
+  if (mu_Yn_est(1,0) >= 400)
+  {
+    // takeoff_flag = 0;
+    // hovering_flag = 1;
+    hove_distance = mu_Yn_est(1,0);
+    flying_mode = 2;
+  }
+}
 
 void rate_control(void)
 {
@@ -599,7 +599,8 @@ void rate_control(void)
   p_ref = Pref;
   q_ref = Qref;
   r_ref = Rref;
-  T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+
+  //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
 
   if(Chdata[4] > (CH5MAX + CH5MIN)*0.5){
     auto_mode =1;
@@ -614,26 +615,14 @@ void rate_control(void)
 
     if(auto_mode_count ==0){
       auto_mode_count = 1;
-      //ideal = Chada[2]
-      ideal = lotated_distance;
+      // ideal = lotated_distance;
+      ideal = mu_Yn_est(1,0);
     }
 
-    input = Kalman_PID(lotated_distance,ideal,z_acc);
+    input = alt_PID(ideal);
     // T_ref = 4.25 + (input/11.1);
     T_ref = 4.25 - (input/11.1);
-    //釣り合いのT = 0.5と仮定
-    // T_ref = 0.6 * BATTERY_VOLTAGE*( 0.5 - (input*0.001));
-    // T_ref = 0.6 * BATTERY_VOLTAGE*input*0.001;
-    //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
   }
-
-
-  // if (auto_mode == 0){
-  //   T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
-  // }
-  // else if(auto_mode ==1){
-  //     T_ref = 0.6 * BATTERY_VOLTAGE*u;//値を１の間にするために0.6をかける
-  // }
 
   //Error
   p_err = p_ref - p_rate;
@@ -849,6 +838,7 @@ void logging(void)
       Logdata[LogdataCounter++]=FL_duty;                    //43
       Logdata[LogdataCounter++]=RR_duty;                  //44
       Logdata[LogdataCounter++]=RL_duty;                  //45
+      Logdata[LogdataCounter++]=input;                 //46
     }
     else Logflag=2;
   }
@@ -1001,6 +991,7 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
     z_acc = Az - 9.76548;
     lotate_altitude_init(Theta,Psi,Phi);
     lotated_distance = lotate_altitude(distance);
+    Kalman_PID(lotated_distance,z_acc);
     // z_acc  = Az-9.80665;
     //input = Kalman_PID(lotated_distance,z_acc);
   }
