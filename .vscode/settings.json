@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "__locale": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "complex": "cpp",
+        "cmath": "cpp"
     }
 }

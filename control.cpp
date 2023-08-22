@@ -18,6 +18,7 @@ uint16_t LedBlinkCounter=0;
 float FR_duty, FL_duty, RR_duty, RL_duty;
 float P_com, Q_com, R_com;
 float T_ref;
+float T_stick;
 float Pbias=0.0,Qbias=0.0,Rbias=0.0;
 float Phi_bias=0.0,Theta_bias=0.0,Psi_bias=0.0;  
 float Phi,Theta,Psi;
@@ -75,15 +76,15 @@ float f_distance = 0;
 float f_distance2 = 0;
 float f_distance3 = 0;
 float lotated_distance = 0;
-Matrix<float, 3 ,1> distance_mat = MatrixXf::Zero(3,1);
-Matrix<float, 3 ,1> f_distance_mat = MatrixXf::Zero(3,1);
+Matrix<float, 1 ,3> distance_mat = MatrixXf::Zero(1,3);
+Matrix<float, 1 ,3> f_distance_mat = MatrixXf::Zero(1,3);
 
 //Log
 uint16_t LogdataCounter=0;
 uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
-const uint8_t DATANUM=46; //Log Data Number
+const uint8_t DATANUM=47; //Log Data Number
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -407,13 +408,13 @@ void motor_stop(void)
 
 void lotate_altitude_init(float Theta,float Psi,float Phi){
   lotate_mat(0,0) = cos(Theta)*cos(Psi);
-  lotate_mat(0,1) = -sin(Psi)*cos(Theta);
-  lotate_mat(0,2) = sin(Theta);
-  lotate_mat(1,0) = (sin(Phi)*sin(Theta)*cos(Psi))+(cos(Phi)*sin(Psi));
-  lotate_mat(1,1) = (-sin(Phi)*sin(Theta)*sin(Psi)) + (cos(Phi) * cos(Psi));
-  lotate_mat(1,2) = -sin(Phi)*cos(Theta);
-  lotate_mat(2,0) = (-sin(Theta)*cos(Phi)*cos(Psi)) + (sin(Phi)*sin(Psi));
-  lotate_mat(2,1) = (sin(Theta)*cos(Phi)*sin(Psi)) + (sin(Phi)*cos(Psi));
+  lotate_mat(0,1) = cos(Theta)*sin(Psi);
+  lotate_mat(0,2) = -sin(Theta);
+  lotate_mat(1,0) = (sin(Phi)*sin(Theta)*cos(Psi))-(cos(Phi)*sin(Psi));
+  lotate_mat(1,1) = (sin(Phi)*sin(Theta)*sin(Psi)) + (cos(Phi) * cos(Psi));
+  lotate_mat(1,2) = sin(Phi)*cos(Theta);
+  lotate_mat(2,0) = (cos(Phi)*sin(Theta)*cos(Psi)) + (sin(Phi)*sin(Psi));
+  lotate_mat(2,1) = (cos(Phi)*sin(Theta)*sin(Psi)) - (sin(Phi)*cos(Psi));
   lotate_mat(2,2) = cos(Phi)*cos(Theta);
 }
 
@@ -421,12 +422,12 @@ float lotate_altitude(float l_distance){
   // distance_mat(0,0) = 0;
   // distance_mat(0,1) = 0;
   distance_mat(0,2) = l_distance;
-  f_distance_mat = lotate_mat * distance_mat;
-  f_distance = f_distance_mat(0,1);
-  f_distance2 = f_distance_mat(0,2);
-  f_distance3 = f_distance_mat(0,3);
+  f_distance_mat =  distance_mat * lotate_mat;
+  f_distance = f_distance_mat(0,0);
+  f_distance2 = f_distance_mat(0,1);
+  f_distance3 = f_distance_mat(0,2);
 
-  return f_distance;
+  return f_distance3;
 }
 
 //自動離着陸モード
@@ -443,12 +444,11 @@ void Auto_fly(void){
   else if (flying_mode == 3){
     Auto_landing();
   }
+  // else if (flying_mode == 4){
+
+  // }
 
 }
-
-// void test_Hovering(void){
-//   u = Kalman_PID(lotated_distance,hove_distance);
-// }
 
 //ホバリング
 void Hovering(void){
@@ -456,38 +456,37 @@ void Hovering(void){
   //本番はゴールを見つけたら着陸モード
   if (hove_time < 4.0)
   {
-    u = alt_PID(hove_distance);
+    input = alt_PID(hove_distance);
     hove_time + 0.03;
   }
   else{
-    // hovering_flag = 0;
-    // landing_flag = 1;
     flying_mode = 3;
   }
 }
 
 //自動着陸
 void Auto_landing(void){
-  ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
-  u = alt_PID(ideal);
   if (mu_Yn_est(1,0) < 90)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
   {
     motor_stop();
-    // landing_flag = 0;
     flying_mode = 4;
+  }
+  else{
+    ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
+    input = alt_PID(ideal);
   }
 }
 
 //自動離陸
 void Auto_takeoff(void){
-  ideal = mu_Yn_est(1,0) + 3;
-  u = alt_PID(ideal);
   if (mu_Yn_est(1,0) >= 400)
   {
-    // takeoff_flag = 0;
-    // hovering_flag = 1;
     hove_distance = mu_Yn_est(1,0);
     flying_mode = 2;
+  }
+  else{
+    ideal = mu_Yn_est(1,0) + 3;
+    input = alt_PID(ideal);
   }
 }
 
@@ -617,11 +616,18 @@ void rate_control(void)
       auto_mode_count = 1;
       // ideal = lotated_distance;
       ideal = mu_Yn_est(1,0);
+      T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
     }
 
+    // Auto_fly();
+
     input = alt_PID(ideal);
-    // T_ref = 4.25 + (input/11.1);
-    T_ref = 4.25 - (input/11.1);
+    if (T_stick < 1.8) {
+      T_ref = 2.1 + input;
+    }
+    else{
+      T_ref = T_stick + (input);
+    }
   }
 
   //Error
@@ -638,14 +644,14 @@ void rate_control(void)
   // 1250/11.1=112.6
   // 1/11.1=0.0901
   
-  // FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
-  // FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
-  // RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
-  // RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
-    FR_duty = (T_ref)*0.0901;
-    FL_duty = (T_ref )*0.0901;
-    RR_duty = (T_ref)*0.0901;
-    RL_duty = (T_ref)*0.0901;
+  FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
+  FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
+  RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
+  RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
+  // FR_duty = (T_ref)*0.0901;
+  // FL_duty = (T_ref )*0.0901;
+  // RR_duty = (T_ref)*0.0901;
+  // RL_duty = (T_ref)*0.0901;
   //FR_duty = (T_ref)*0.0901;
   //FL_duty = (T_ref)*0.0901;
   //RR_duty = (T_ref)*0.0901;
@@ -839,6 +845,8 @@ void logging(void)
       Logdata[LogdataCounter++]=RR_duty;                  //44
       Logdata[LogdataCounter++]=RL_duty;                  //45
       Logdata[LogdataCounter++]=input;                 //46
+      Logdata[LogdataCounter++]=u;                  //47
+      Logdata[LogdataCounter++]=ideal;              //48
     }
     else Logflag=2;
   }
@@ -987,7 +995,6 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
     Status = VL53L1X_GetDistance(dev,&distance);
     Status = VL53L1X_ClearInterrupt(dev);
     // z_acc  = Az-9.80665;
-    //何故 gを引くのか
     z_acc = Az - 9.76548;
     lotate_altitude_init(Theta,Psi,Phi);
     lotated_distance = lotate_altitude(distance);

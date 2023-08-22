@@ -60,10 +60,13 @@ float observe_y;
 // float Kp_v = 0.2;
 // float Ki_v = 900;
 // float Kd_v = 0;
-float Kp = 1;
+// float Kp = 1;
+// float Kp = 0.1;
+float Kp = 0.08;
 float Ki = 900;
 float Kd = 0;
-float Kp_v = 0.08;
+// float Kp_v = 0.08;
+float Kp_v = 0.003;
 float Ki_v = 300;
 float Kd_v = 0;
 float u = 0;
@@ -213,7 +216,8 @@ float Kalman_PID(float observe_y,float Ax)
 
 float alt_PID(float ref_alt){
     // error = target - mu_Yn_est(1,0);
-    error = mu_Yn_est(1,0) - ref_alt ;
+    // error = mu_Yn_est(1,0) - ref_alt ;
+    error =  ref_alt - mu_Yn_est(1,0) ;
     integral = integral + (h_kalman * (error + last_error)) / (2 * Ki);
     differential = (((2 * eta * Kd - h_kalman) * differential) / (2 * eta * Kd + h_kalman)) + ((2 * Kd) * (error - last_error)) / (2 * eta * Kd + h_kalman);
     // de = (error - last_error)/Control_T;
