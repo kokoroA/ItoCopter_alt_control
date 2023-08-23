@@ -84,7 +84,7 @@ uint16_t LogdataCounter=0;
 uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
-const uint8_t DATANUM=47; //Log Data Number
+const uint8_t DATANUM=48; //Log Data Number
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -466,15 +466,17 @@ void Hovering(void){
 
 //自動着陸
 void Auto_landing(void){
-  if (mu_Yn_est(1,0) < 90)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
-  {
-    motor_stop();
-    flying_mode = 4;
-  }
-  else{
-    ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
-    input = alt_PID(ideal);
-  }
+  // if (mu_Yn_est(1,0) < 50)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+  // {
+    // motor_stop();
+    // flying_mode = 4;
+  // }
+  // else{
+  //   ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
+  //   input = alt_PID(ideal);
+  // }
+  ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
+  input = alt_PID(ideal);
 }
 
 //自動離陸
@@ -485,7 +487,7 @@ void Auto_takeoff(void){
     flying_mode = 2;
   }
   else{
-    ideal = mu_Yn_est(1,0) + 3;
+    ideal = mu_Yn_est(1,0) + 1;
     input = alt_PID(ideal);
   }
 }
@@ -496,93 +498,8 @@ void rate_control(void)
   float p_ref, q_ref, r_ref;
   float p_err, q_err, r_err;
 
-  //  if (flying_mode == 0){
-  //   stick = Chdata[2];
-  //   flying_mode = 1;
-  // }
-
   //Read Sensor Value
   sensor_read();
-
-  // lotate_altitude_init(Theta,Psi,Phi);
-  // //lotate_altitudeもfloat型に変換して計算しているか確認
-  // lotated_distance = lotate_altitude(distance);
-
-  // auto_mode = 0;
-  // hov_distance_flag = 0;
-  // last_stick = stick;
-
-  // if((Chdata[2]-last_stick) < 13 || (Chdata[2]-last_stick) > 13)
-  // {
-  //   motor_stop();
-  // }
-
-  //通常モード
-  // if (Chdata[4]<(CH5MAX+CH5MIN)*0.5){
-  //   auto_mode = 1;
-  //   if (base_dis_count == 0){
-  //     stick = Chdata[2];
-  //     base_dis_count = 1;
-  //   }
-  //   // //スティック入力を理想値とする。スティック入力の値の変更が無ければ、その値の高度を保つ
-  //   // if (Chdata[2] >= 690 && Chdata[2] <= 715)
-  //   // {
-  //   //   ideal = lotated_distance;
-  //   //   u = Kalman_PID(lotated_distance,ideal);
-  //   // }
-  //   // else if(Chdata[2] < 690)
-  //   // {
-  //   //   if(Chdata[2] >= CH3MIN && Chdata[2] <= 350){
-  //   //     motor_stop();
-  //   //   }
-  //   //   ideal = lotated_distance - 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
-  //   //   u = Kalman_PID(lotated_distance,ideal);
-  //   // }
-  //   // else if(Chdata[2] > 715)
-  //   // {
-  //   //   ideal = lotated_distance + 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
-  //   //   u = Kalman_PID(lotated_distance,ideal);
-  //   // }
-
-  //   //高度を保つ処理
-  //   if(Chdata[2] >= (stick+15) && Chdata[2] >= (stick-15)){
-  //     //ideal = lotated_distance;
-  //     ideal = distance;
-  //     u = Kalman_PID(distance,ideal);
-  //   }
-  //   //スティックの変化量に比例して高度上昇の処理
-  //   else if (Chdata[2] > stick + 15)
-  //   {
-  //     ideal = distance + 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
-  //     u = Kalman_PID(distance,ideal);
-  //   }
-  //   //スティックの変化量に比例して高度を下げる処理
-  //   else if (Chdata[2] < stick + 15)
-  //   {
-  //     if(Chdata[2] >= CH3MIN && Chdata[2] <= 350){     
-  //       motor_stop();
-  //     }
-
-  //     ideal = distance - 0.1 * (2*(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN) - 1);
-  //     u = Kalman_PID(distance,ideal);
-  //   }
-    
-  // }
-  // else {
-  //   base_dis_count = 0;
-  // }
-
-  // ideal = (float)distance - 0.1 * (2.0*(500-(float)CH3MIN)/((float)CH3MAX-(float)CH3MIN) - 1.0f);
-  // ideal = 5;
-  // input = Kalman_PID((float)distance,(float)distance);
-
-
-
-  // altitude_count += 1;
-  // if(altitude_count == 21){
-  //   get_Altitude();
-  //   altitude_count = 0;
-  // }
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -603,31 +520,57 @@ void rate_control(void)
 
   if(Chdata[4] > (CH5MAX + CH5MIN)*0.5){
     auto_mode =1;
+    flying_mode = 1;
   }
   else{
+    flying_mode = 0;
     auto_mode =0;
     auto_mode_count = 0;
     T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+
   }
 
   if (auto_mode ==1){
+    count_up += 1;
+    if (count_up == 20){
+      count_up = 0;
+      if(auto_mode_count ==0){
+        auto_mode_count = 1;
+        ideal = mu_Yn_est(1,0);
+        //Autofly時はoff
+        //T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+      }
 
-    if(auto_mode_count ==0){
-      auto_mode_count = 1;
-      // ideal = lotated_distance;
-      ideal = mu_Yn_est(1,0);
-      T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
-    }
-
-    // Auto_fly();
-
-    input = alt_PID(ideal);
-    if (T_stick < 1.8) {
-      T_ref = 2.1 + input;
-    }
-    else{
+      // Auto_fly();
+      Auto_landing();
       T_ref = T_stick + (input);
+
+      //input = alt_PID(ideal);
+      // if (T_stick < 1.8) {
+      //   T_ref = 2.1 + input;
+      // }
+      // else{
+      //   T_ref = T_stick + (input);
+      // }
     }
+    // if(auto_mode_count ==0){
+    //   auto_mode_count = 1;
+    //   ideal = mu_Yn_est(1,0);
+    //   //Autofly時はoff
+    //   T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+    // }
+
+    // // Auto_fly();
+    // // Auto_landing();
+    // // T_ref = T_stick + (input);
+
+    // input = alt_PID(ideal);
+    // if (T_stick < 1.8) {
+    //   T_ref = 2.1 + input;
+    // }
+    // else{
+    //   T_ref = T_stick + (input);
+    // }
   }
 
   //Error

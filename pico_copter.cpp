@@ -67,31 +67,31 @@ int main(void)
     // start_time = start_time + 1;
 
 
-    budget_s = time_us_64();
-    if (diff_sum >= 5000)
-    {
-      // start_time = 0;
-      diff_sum = 0;
-      printf("%9.6f %4d %9.6f %9.6f\n",(current_t-start_t)/1000000.0,distance,lotated_distance,mu_Yn_est(1,0));
-      //printf("distance : %4d\n",distance);
-      // printf("ideal : %9.6f\n",ideal);
-      //printf("lotated_distance : %9.6f\n",lotated_distance);
-      // printf("Altitude  : %9.6f\n",mu_Yn_est(1,0));
-      // printf("velocity  : %9.6f\n",mu_Yn_est(0,0));
-      //printf("%9.6f %4d \n",(current_t-start_t)/1000000.0,distance);
-      // printf("Ax  : %9.6f\n",z_acc+ 9.80665);
-      // printf("z_acc  : %9.6f\n",z_acc);
-      // printf("input  : %9.6f\n",input);
-      //printf("T_ref  : %9.6f\n",T_ref);
-      // printf("func_time %9.6f \n",func_time);
-      // printf("count %llu \n", count_up);
-      current_t = time_us_64();
-    }
-    else{
-      budget_e = time_us_64();
-      diff = budget_e - budget_s;
-      diff_sum = diff_sum + diff;
-    }
+    // budget_s = time_us_64();
+    // if (diff_sum >= 5000)
+    // {
+    //   // start_time = 0;
+    //   diff_sum = 0;
+    //   // printf("%9.6f %4d %9.6f %9.6f\n",(current_t-start_t)/1000000.0,distance,lotated_distance,mu_Yn_est(1,0));
+    //   //printf("distance : %4d\n",distance);
+    //   // printf("ideal : %9.6f\n",ideal);
+    //   //printf("lotated_distance : %9.6f\n",lotated_distance);
+    //   // printf("Altitude  : %9.6f\n",mu_Yn_est(1,0));
+    //   // printf("velocity  : %9.6f\n",mu_Yn_est(0,0));
+    //   //printf("%9.6f %4d \n",(current_t-start_t)/1000000.0,distance);
+    //   // printf("Ax  : %9.6f\n",z_acc+ 9.80665);
+    //   // printf("z_acc  : %9.6f\n",z_acc);
+    //   printf("%9.6f %9.6f\n",(current_t-start_t)/1000000.0,input);
+    //   //printf("T_ref  : %9.6f\n",T_ref);
+    //   // printf("func_time %9.6f \n",func_time);
+    //   // printf("count %llu \n", count_up);
+    //   current_t = time_us_64();
+    // }
+    // else{
+    //   budget_e = time_us_64();
+    //   diff = budget_e - budget_s;
+    //   diff_sum = diff_sum + diff;
+    // }
     
 
     // printf("%9.6f %4d \n",(current_t-start_t)/1000000.0,distance);

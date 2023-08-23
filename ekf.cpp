@@ -63,11 +63,13 @@ float observe_y;
 // float Kp = 1;
 // float Kp = 0.1;
 float Kp = 0.08;
-float Ki = 900;
+// float Ki = 900;//400Hz
+float Ki = 112.5;//50Hz
 float Kd = 0;
 // float Kp_v = 0.08;
 float Kp_v = 0.003;
-float Ki_v = 300;
+// float Ki_v = 300;//400Hz
+float Ki_v = 37.5;//50Hz
 float Kd_v = 0;
 float u = 0;
 float u_v = 0;
