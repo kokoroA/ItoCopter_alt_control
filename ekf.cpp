@@ -29,13 +29,10 @@ Matrix<float, 2,1> mu_Yn_pre  = MatrixXf::Zero(2,1);
 Matrix<float, 2,1> last_mu_Yn_pre = MatrixXf::Zero(2,1);
 Matrix<float, 2,1> mu_Yn_est = MatrixXf::Zero(2,1);
 Matrix<float, 2,2> Q_mat = MatrixXf::Zero(2,2);
-Matrix<float, 1,1> Q_k_mat = MatrixXf::Zero(1,1);
 Matrix<float, 1,1> u_n  = MatrixXf::Zero(1,1);
 Matrix<float, 1,1> u_n_v  = MatrixXf::Zero(1,1);
 Matrix<float, 1,1> yn_mat;
 Matrix<float, 1,1> k_inv;
-Matrix<float, 1,1> mu_Yn_est_par = MatrixXf::Zero(1,1);
-Matrix<float, 2,1> mu_Yn_est_par2 = MatrixXf::Zero(2,1);
 // float stdv_Q = 0.08;
 float stdv_Q = 0.01;
 float stdv_Q_v = 0.025;
@@ -83,15 +80,92 @@ float differential = 0;
 float integral_v = 0;
 float differential_v = 0;
 float eta = 0.125;
-// float R = 0;
 
-// void initialize(void)
-// {
-// }
+//Kalmanfilter for Horizontal
+float h_horizontal = 0.2;
+//推定,予測する状態
+float Xn_pre_1 = 0;
+float Xn_pre_2 = 0;
+float Xn_pre_3 = 0;
+float Xn_est_1 = 0;
+float Xn_est_2 = 0;
+float Xn_est_3 = 0;
+//推定、予測する誤差の共分散
+float p11_pre = 1;
+float p12_pre = 0;
+float p13_pre = 0; 
+float p21_pre = 0;
+float p22_pre = 1; 
+float p23_pre = 0; 
+float p31_pre = 0; 
+float p32_pre = 0; 
+float p33_pre = 1; 
+float p11_est = 1;
+float p12_est = 0;
+float p13_est = 0; 
+float p21_est = 0;
+float p22_est = 1; 
+float p23_est = 0; 
+float p31_est = 0; 
+float p32_est = 0; 
+float p33_est = 1; 
+//イノベーション
+float e1 = 0;
+float e2 = 0;
+//カルマンゲイン計算のための変数
+float s11 = 0;
+float s12 = 0;
+float s13 = 0;
+float s21 = 0;
+float s22 = 0;
+float s23 = 0;
+float s_i11 = 0;
+float s_i12 = 0;
+float s_i13 = 0;
+float s_i21 = 0;
+float s_i22 = 0;
+float s_i23 = 0;
+//カルマンゲイン
+float K11 = 0;
+float K12 = 0;
+float K21 = 0;
+float K22 = 0;
+float K31 = 0;
+float K32 = 0;
+//定数
+float g = 9.81;
+float u0 = 0;
+float w0 = 0;
+float Cv = 0;
+float V0 = 0;
+float delta_p = 0;
+float delta_r = 0;
+float theta0 = 0;
+float delta_phi = 0;
+float delta_psi = 0;
+float theta_horizontal = 0;
+//離散化した運動方程式の要素
+float f11 = (1-2*Cv*V0*h_horizontal)/m;
+float f12 = 0;
+float f13 = 0;
+float f21 = h_horizontal;
+float f22 = 1;
+float f23 = u0*cos(theta_horizontal) + w0*sin(theta0);
+float f31 = 0;
+float f32 = 0;
+float f33 = 1;
+//離散化した制御行列の要素
+float u1 = (-u0*delta_r + w0*delta_p + g*cos(theta0)*delta_phi) * h_horizontal;
+float u2 = -w0*delta_phi*h_horizontal;
+float u3 = 1/cos(theta0) * delta_r * h_horizontal;
+//システムノイズ
+float q1 = 0.01;
+float q2 = 0.01;
+float q3 = 0.01;
+//観測の共分散
+float r1 = 0.01;
+float r2 = 0.01;
 
-// void Kalman_PID(void)
-// {
-// }
 
 float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
                     Matrix<float, 2,2> &Sigma_Yn_pre,
@@ -142,6 +216,57 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
 //   Kal_element_inv = Kal_element.inverse();
 //   K = (Sigma_Yn_pre * observation_mat_transposed) * Kal_element_inv;
     return 0;
+}
+
+float Kalman_holizontal(float camera_y,float camera_psi){
+  //Xの予測
+  Xn_pre_1 = f11*Xn_est_1 + f12*Xn_est_2 +f13*Xn_est_3 + u1;
+  Xn_pre_2 = f21*Xn_est_1 + f22*Xn_est_2 +f23*Xn_est_3 + u2;
+  Xn_pre_3 = f31*Xn_est_1 + f32*Xn_est_2 +f33*Xn_est_3 + u3;
+  //誤差共分散の予測
+  p11_pre = (f11*f11*p11_est) + q1;
+  p12_pre = f11*f12*p12_est + f21*p12_est + f11*f23*p13_est ;
+  p13_pre = f11*p13_est;
+  p21_pre = f11*(f21*p21_est + p21_est + f23 * p31_est);
+  p22_pre = f21*(f21*p11_est + p21_est + f23*p31_est) + f21*p12_est + p22_est + f23*p32_est + (f23*(f21*p13_est + p23_est + f23*p33_est)) + q2; 
+  p23_pre = f21*p13_est + p23_est + f23*p33_est; 
+  p31_pre = p31_est*f11; 
+  p32_pre = p31_est*f21 + p32_est + p33_est*f23; 
+  p33_pre = p33_est + q3; 
+  //イノベーション
+  e1 = camera_y - Xn_est_2;
+  e2 = camera_psi - Xn_est_3;
+  s11 =r1 - p22_est;
+  s12 = -p23_est;
+  s21 = -p32_est;
+  s22 = r2 -p33_est;
+  //カルマンゲインの計算
+  s_i11 = s11 / (s11*s22 - s12*s21);
+  s_i12 = -s12 / (s11*s22 - s12*s21);
+  s_i21 = -s21 / (s11*s22 - s12*s21);
+  s_i22 = s22 / (s11*s22 - s12*s21);
+  K11 = p12_pre * s_i11 + p13_pre * s_i21;
+  K12 = p12_pre * s_i12 + p13_pre * s_i22;
+  K21 = p22_pre * s_i11 + p23_pre * s_i21;
+  K22 = p22_pre * s_i12 + p23_pre * s_i22;
+  K31 = p32_pre * s_i11 + p33_pre * s_i21;
+  K32 = p32_pre * s_i12 + p33_pre * s_i22;
+  //状態の推定
+  Xn_est_1 = Xn_pre_1 + K11*e1 + K12*e2;
+  Xn_est_2 = Xn_pre_2 + K21*e1 + K22*e2;
+  Xn_est_3 = Xn_pre_3 + K31*e1 + K32*e2;
+  //誤差の共分散の推定
+  p11_est = p11_pre -K11*p21_pre -K12*p31_pre;
+  p12_est = p12_pre - K11*p22_pre -K12*p32_pre;
+  p13_est = p13_pre - K11*p23_pre - K12*p33_pre;
+  p21_est = p21_pre * (1 - K21) - K22*p31_pre;
+  p22_est = p22_pre * (1-K21) - K22*p32_pre; 
+  p23_est = p23_pre*(1 - K21) - K22*p33_pre;
+  p31_pre = -K31*p21_pre + p31_pre*(1 - K32);
+  p32_pre = -K31*p22_pre + p32_pre*(1 - K32);
+  p33_pre = -K31*p23_pre + p33_pre*(1 - K32);
+
+  return 1;
 }
 
 float Kalman_PID(float observe_y,float Ax)

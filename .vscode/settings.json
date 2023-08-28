@@ -3,6 +3,8 @@
         "__locale": "cpp",
         "iterator": "cpp",
         "complex": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "numbers": "cpp",
+        "random": "cpp"
     }
 }

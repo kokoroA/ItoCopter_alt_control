@@ -59,14 +59,8 @@ uint8_t range_gbuf[16];
 float range_flag = 0;
 uint16_t altitude_count = 0;
 float stick;
-float last_stick;
-float hov_distance_flag = 0;
 float auto_mode = 0;
 float ideal;
-float takeoff_flag = 0;
-float landing_flag = 0;
-float initialize_flag =1;
-float hovering_flag = 0;
 float hove_distance;
 float hove_time = 0.0;
 float flying_mode = 0;
@@ -84,7 +78,8 @@ uint16_t LogdataCounter=0;
 uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
-const uint8_t DATANUM=48; //Log Data Number
+// const uint8_t DATANUM=48; //Log Data Number
+const uint8_t DATANUM=1; //Log Data Number
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -466,15 +461,15 @@ void Hovering(void){
 
 //自動着陸
 void Auto_landing(void){
-  // if (mu_Yn_est(1,0) < 50)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
-  // {
-    // motor_stop();
-    // flying_mode = 4;
-  // }
-  // else{
-  //   ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
-  //   input = alt_PID(ideal);
-  // }
+  if (mu_Yn_est(1,0) < 50)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+  {
+    motor_stop();
+    flying_mode = 4;
+  }
+  else{
+    ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
+    input = alt_PID(ideal);
+  }
   ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
   input = alt_PID(ideal);
 }
@@ -536,16 +531,27 @@ void rate_control(void)
       count_up = 0;
       if(auto_mode_count ==0){
         auto_mode_count = 1;
-        ideal = mu_Yn_est(1,0);
+        //ideal = mu_Yn_est(1,0);
         //Autofly時はoff
-        //T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+        T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
       }
 
       // Auto_fly();
-      Auto_landing();
-      T_ref = T_stick + (input);
-
-      //input = alt_PID(ideal);
+      // Auto_landing();
+      // T_ref = T_stick + (input);
+      if (mu_Yn_est(1,0) < 200){
+        T_ref = T_stick - 0.5;
+      }
+      if (mu_Yn_est(1,0) < 150)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+      {
+        motor_stop();
+      }
+      else{
+        ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
+        input = alt_PID(ideal);
+        T_ref = T_stick + (input);
+      }
+      // input = alt_PID(ideal);
       // if (T_stick < 1.8) {
       //   T_ref = 2.1 + input;
       // }
@@ -736,61 +742,64 @@ void logging(void)
       Logflag=1;
       LogdataCounter=0;
     }
-    if(LogdataCounter+DATANUM<LOGDATANUM)
-    {
-      Logdata[LogdataCounter++]=Xe(0,0);                  //1
-      Logdata[LogdataCounter++]=Xe(1,0);                  //2
-      Logdata[LogdataCounter++]=Xe(2,0);                  //3
-      Logdata[LogdataCounter++]=Xe(3,0);                  //4
-      Logdata[LogdataCounter++]=Xe(4,0);                  //5
-      Logdata[LogdataCounter++]=Xe(5,0);                  //6
-      Logdata[LogdataCounter++]=Xe(6,0);                  //7
-      Logdata[LogdataCounter++]=Wp;//-Pbias;              //8
-      Logdata[LogdataCounter++]=Wq;//-Qbias;              //9
-      Logdata[LogdataCounter++]=Wr;//-Rbias;              //10
-
-      Logdata[LogdataCounter++]=Ax;                       //11
-      Logdata[LogdataCounter++]=Ay;                       //12
-      Logdata[LogdataCounter++]=Az;                       //13
-      Logdata[LogdataCounter++]=Mx;                       //14
-      Logdata[LogdataCounter++]=My;                       //15
-      Logdata[LogdataCounter++]=Mz;                       //16
-      Logdata[LogdataCounter++]=Pref;                     //17
-      Logdata[LogdataCounter++]=Qref;                     //18
-      Logdata[LogdataCounter++]=Rref;                     //19
-      Logdata[LogdataCounter++]=Phi-Phi_bias;             //20
-
-      Logdata[LogdataCounter++]=Theta-Theta_bias;         //21
-      Logdata[LogdataCounter++]=Psi-Psi_bias;             //22
-      Logdata[LogdataCounter++]=Phi_ref;                  //23
-      Logdata[LogdataCounter++]=Theta_ref;                //24
-      Logdata[LogdataCounter++]=Psi_ref;                  //25
-      Logdata[LogdataCounter++]=P_com;                    //26
-      Logdata[LogdataCounter++]=Q_com;                    //27
-      Logdata[LogdataCounter++]=R_com;                    //28
-      Logdata[LogdataCounter++]=p_pid.m_integral;//m_filter_output;    //29
-      Logdata[LogdataCounter++]=q_pid.m_integral;//m_filter_output;    //30
-
-      Logdata[LogdataCounter++]=r_pid.m_integral;//m_filter_output;    //31
-      Logdata[LogdataCounter++]=phi_pid.m_integral;//m_filter_output;  //32
-      Logdata[LogdataCounter++]=theta_pid.m_integral;//m_filter_output;//33
-      Logdata[LogdataCounter++]=Pbias;                    //34
-      Logdata[LogdataCounter++]=Qbias;                    //35
-
-      Logdata[LogdataCounter++]=Rbias;                    //36
-      Logdata[LogdataCounter++]=T_ref;                    //37
-      Logdata[LogdataCounter++]=Acc_norm;                 //38
-      Logdata[LogdataCounter++]=distance;                 //39
-      Logdata[LogdataCounter++]=mu_Yn_est(1,0);           //40
-      Logdata[LogdataCounter++]=mu_Yn_est(0,0);           //41
-      Logdata[LogdataCounter++]=FR_duty;                   //42
-      Logdata[LogdataCounter++]=FL_duty;                    //43
-      Logdata[LogdataCounter++]=RR_duty;                  //44
-      Logdata[LogdataCounter++]=RL_duty;                  //45
-      Logdata[LogdataCounter++]=input;                 //46
-      Logdata[LogdataCounter++]=u;                  //47
-      Logdata[LogdataCounter++]=ideal;              //48
+    if(LogdataCounter+DATANUM<LOGDATANUM){
+      Logdata[LogdataCounter++]=mu_Yn_est(1,0); //1
     }
+    // if(LogdataCounter+DATANUM<LOGDATANUM)
+    // {
+    //   Logdata[LogdataCounter++]=Xe(0,0);                  //1
+    //   Logdata[LogdataCounter++]=Xe(1,0);                  //2
+    //   Logdata[LogdataCounter++]=Xe(2,0);                  //3
+    //   Logdata[LogdataCounter++]=Xe(3,0);                  //4
+    //   Logdata[LogdataCounter++]=Xe(4,0);                  //5
+    //   Logdata[LogdataCounter++]=Xe(5,0);                  //6
+    //   Logdata[LogdataCounter++]=Xe(6,0);                  //7
+    //   Logdata[LogdataCounter++]=Wp;//-Pbias;              //8
+    //   Logdata[LogdataCounter++]=Wq;//-Qbias;              //9
+    //   Logdata[LogdataCounter++]=Wr;//-Rbias;              //10
+
+    //   Logdata[LogdataCounter++]=Ax;                       //11
+    //   Logdata[LogdataCounter++]=Ay;                       //12
+    //   Logdata[LogdataCounter++]=Az;                       //13
+    //   Logdata[LogdataCounter++]=Mx;                       //14
+    //   Logdata[LogdataCounter++]=My;                       //15
+    //   Logdata[LogdataCounter++]=Mz;                       //16
+    //   Logdata[LogdataCounter++]=Pref;                     //17
+    //   Logdata[LogdataCounter++]=Qref;                     //18
+    //   Logdata[LogdataCounter++]=Rref;                     //19
+    //   Logdata[LogdataCounter++]=Phi-Phi_bias;             //20
+
+    //   Logdata[LogdataCounter++]=Theta-Theta_bias;         //21
+    //   Logdata[LogdataCounter++]=Psi-Psi_bias;             //22
+    //   Logdata[LogdataCounter++]=Phi_ref;                  //23
+    //   Logdata[LogdataCounter++]=Theta_ref;                //24
+    //   Logdata[LogdataCounter++]=Psi_ref;                  //25
+    //   Logdata[LogdataCounter++]=P_com;                    //26
+    //   Logdata[LogdataCounter++]=Q_com;                    //27
+    //   Logdata[LogdataCounter++]=R_com;                    //28
+    //   Logdata[LogdataCounter++]=p_pid.m_integral;//m_filter_output;    //29
+    //   Logdata[LogdataCounter++]=q_pid.m_integral;//m_filter_output;    //30
+
+    //   Logdata[LogdataCounter++]=r_pid.m_integral;//m_filter_output;    //31
+    //   Logdata[LogdataCounter++]=phi_pid.m_integral;//m_filter_output;  //32
+    //   Logdata[LogdataCounter++]=theta_pid.m_integral;//m_filter_output;//33
+    //   Logdata[LogdataCounter++]=Pbias;                    //34
+    //   Logdata[LogdataCounter++]=Qbias;                    //35
+
+    //   Logdata[LogdataCounter++]=Rbias;                    //36
+    //   Logdata[LogdataCounter++]=T_ref;                    //37
+    //   Logdata[LogdataCounter++]=Acc_norm;                 //38
+    //   Logdata[LogdataCounter++]=distance;                 //39
+    //   Logdata[LogdataCounter++]=mu_Yn_est(1,0);           //40
+    //   Logdata[LogdataCounter++]=mu_Yn_est(0,0);           //41
+    //   Logdata[LogdataCounter++]=FR_duty;                   //42
+    //   Logdata[LogdataCounter++]=FL_duty;                    //43
+    //   Logdata[LogdataCounter++]=RR_duty;                  //44
+    //   Logdata[LogdataCounter++]=RL_duty;                  //45
+    //   Logdata[LogdataCounter++]=input;                 //46
+    //   Logdata[LogdataCounter++]=u;                  //47
+    //   Logdata[LogdataCounter++]=ideal;              //48
+    // }
     else Logflag=2;
   }
   else

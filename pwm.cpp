@@ -8,7 +8,7 @@ uint8_t ESC_calib=0;
 
 //ファイル内グローバル変数
 const uint Slice_num_rear=1;
-const uint Slice_num_front=2;
+const uint Slice_num_front=7;
 const uint Slice_num_servo = 3;
 
 void pwm_init()
@@ -17,8 +17,8 @@ void pwm_init()
     // Tell GPIO 2-6 they are allocated to the PWM for Motor & Servo Control
     gpio_set_function(2, GPIO_FUNC_PWM);//Rear  Left  (RL) Motor PWM
     gpio_set_function(3, GPIO_FUNC_PWM);//Rear  Right (RR) Motor PWM
-    gpio_set_function(4, GPIO_FUNC_PWM);//Front Left  (FL) Motor PWM
-    gpio_set_function(5, GPIO_FUNC_PWM);//Front Right (FR) Motro PWM
+    gpio_set_function(14, GPIO_FUNC_PWM);//Front Left  (FL) Motor PWM
+    gpio_set_function(15, GPIO_FUNC_PWM);//Front Right (FR) Motro PWM
     gpio_set_function(6, GPIO_FUNC_PWM);//Servo PWM
 
 
