@@ -21,8 +21,6 @@ void pwm_init()
     gpio_set_function(15, GPIO_FUNC_PWM);//Front Right (FR) Motro PWM
     gpio_set_function(6, GPIO_FUNC_PWM);//Servo PWM
 
-
-
     // Find out which PWM slice is connected to GPIO 0 (it's slice 0)
     // Set period T
     // T=(wrap+1)*clkdiv/sysclock
@@ -39,7 +37,6 @@ void pwm_init()
     pwm_set_irq_enabled(Slice_num_front, true);
     irq_set_exclusive_handler(PWM_IRQ_WRAP, MAINLOOP);
     irq_set_enabled(PWM_IRQ_WRAP, true);
-
     if(ESC_calib==1)
     {
       // ESC calibration

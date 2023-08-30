@@ -208,13 +208,6 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
     Q_mat(0,1) = 0;
     Q_mat(1,0) = 0;
     Q_mat(1,1) = Q_k;
-//   R (0,0)= std::pow(stdv_R,2.0);
-//   R(1,0) = std::pow(stdv_R,2.0);
-  //Q_mat(0,0) = Q;
-//   observation_mat_transposed = observation_mat.transpose();
-//   Kal_element = observation_mat * Sigma_Yn_pre * observation_mat_transposed + R_mat;
-//   Kal_element_inv = Kal_element.inverse();
-//   K = (Sigma_Yn_pre * observation_mat_transposed) * Kal_element_inv;
     return 0;
 }
 
@@ -281,61 +274,12 @@ float Kalman_PID(float observe_y,float Ax)
 
     //カルマンフィルタ
     mu_Yn_pre = (system_mat * last_mu_Yn_pre) + (control_mat*(Ax));
-    //printf("Q_mat: %9.6f , %9.6f, %9.6f, %9.6f\n",Q_mat(0,0),Q_mat(0,1),Q_mat(1,0),Q_mat(1,1));
-    // printf("SigmaYnPre: %9.6f , %9.6f, %9.6f, %9.6f\n",Sigma_Yn_pre(0,0),Sigma_Yn_pre(0,1),Sigma_Yn_pre(1,0),Sigma_Yn_pre(1,1));
-    //printf("muYnPre: %9.6f , %9.6f, %9.6f, %9.6f\n",mu_Yn_pre(0,0),mu_Yn_pre(0,1),mu_Yn_pre(1,0),mu_Yn_pre(1,1));
     Sigma_Yn_pre = (system_mat * last_Sigma_Yn_pre * system_mat.transpose()) + Q_mat;
-    //printf("SigmaYnPre2: %9.6f , %9.6f, %9.6f, %9.6f\n",Sigma_Yn_pre(0,0),Sigma_Yn_pre(0,1),Sigma_Yn_pre(1,0),Sigma_Yn_pre(1,1));
-    //Sigma_Yn_pre = (system_mat * last_Sigma_Yn_pre * system_mat.transpose()) + Q_k_mat;
-    //Sigma_Yn_pre = (system_mat * last_Sigma_Yn_pre * system_mat.transpose()).eval() + Q;
-    // K = (Sigma_Yn_pre * observation_mat_transposed) * Kal_element_inv;
     k_inv = ((observation_mat * Sigma_Yn_pre * observation_mat.transpose()) + R_mat);
     K = (Sigma_Yn_pre * observation_mat.transpose()) / k_inv(0,0);
-    // K = (Sigma_Yn_pre * observation_mat_transposed) / ((observation_mat * Sigma_Yn_pre * observation_mat.transpose()) + R);
-    //printf("Observation_mat : %9.6f, %9.6f \n",observation_mat_tra(0,0));
-    //printf("K : %9.6f, %9.6f ,%9.6f\n",K(0,0),K(1,0),k_inv(0,0));
-    // printf("SigmaYnPre: %9.6f , %9.6f, %9.6f, %9.6f\n",Sigma_Yn_pre(0,0),Sigma_Yn_pre(0,1),Sigma_Yn_pre(1,0),Sigma_Yn_pre(1,1));
-    //mu_Yn_est_par = (yn_mat - (observation_mat * mu_Yn_pre));
-    //mu_Yn_est_par2 = (K * mu_Yn_est_par);
     mu_Yn_est = mu_Yn_pre + K * (observe_y - (observation_mat * mu_Yn_pre));
-    //mu_Yn_est = mu_Yn_pre + mu_Yn_est_par2;
-    // printf("yn_mat: %9.6f \n",(observe_y - (observation_mat * mu_Yn_pre)));
-    //printf("muYnEstPar : %9.6f \n",mu_Yn_est_par(0,0));
-    // printf("K : %9.6f, %9.6f\n",K(0,0),K(1,0));
-   //printf("muYnEstPar2 : %9.6f,%9.6f\n",mu_Yn_est_par2(0,0),mu_Yn_est_par2(1,0));
-    //printf("muYnPre: %9.6f , %9.6f\n",mu_Yn_pre(0,0),mu_Yn_pre(1,0));
-    //printf("SigmaYnEst1: %9.6f , %9.6f, %9.6f, %9.6f\n",Sigma_Yn_est(0,0),Sigma_Yn_est(0,1),Sigma_Yn_est(1,0),Sigma_Yn_est(1,1));
-    //printf("muYnEst: %9.6f , %9.6f\n",mu_Yn_est(0,0),mu_Yn_est(1,0));
     Sigma_Yn_est = (unit_mat - (K * observation_mat)) * Sigma_Yn_pre;
-    //printf("SigmaYnEst2: %9.6f , %9.6f, %9.6f, %9.6f\n",Sigma_Yn_est(0,0),Sigma_Yn_est(0,1),Sigma_Yn_est(1,0),Sigma_Yn_est(1,1));
-
-    // //PID for Altitude
-    // //rが理想値
-    // r = 0;
-    // error = r - mu_Yn_est(1,0);
-
-    // // error = target - mu_Yn_est(1,0);
-    // error = mu_Yn_est(1,0) - target ;
-    // integral = integral + (h_kalman * (error + last_error)) / (2 * Ki);
-    // differential = (((2 * eta * Kd - h_kalman) * differential) / (2 * eta * Kd + h_kalman)) + ((2 * Kd) * (error - last_error)) / (2 * eta * Kd + h_kalman);
-    // // de = (error - last_error)/Control_T;
-    // // ie = ie + ((error + last_error)*(Control_T/2));
-    // // u_n(0,0)= (Kp*error) + (Ki*ie) + (Kd*de);
-    // u_n(0,0) = Kp * (error + integral + differential);
-    // u = u_n(0,0);
-
-    // // //PID for velocity
-    // // //rが理想値
-    // error_v = u - mu_Yn_est(0,0);
-    // //error_v = mu_Yn_est(0,0) - u;
-    // integral_v = integral_v + (h_kalman * (error_v + last_error_v)) / (2 * Ki_v);
-    // differential_v = (((2 * eta * Kd_v - h_kalman) * differential) / (2 * eta * Kd_v + h_kalman)) + ((2 * Kd_v) * (error_v - last_error_v)) / (2 * eta * Kd_v + h_kalman);
-    // // de_v = (error_v - last_error_v)/Control_T;
-    // // ie_v = ie_v + ((error_v + last_error_v)*(Control_T/2));
-    // // u_n_v(0,0)= (Kp_v*error_v) + (Ki_v*ie_v) + (Kd_v*de_v);
-    // u_n_v(0,0) = Kp_v * (error_v + integral_v + differential_v);
-    // u_v = u_n_v(0,0);
-
+    
     // return u_v;
     // return mu_Yn_est(1,0);
     return 1;
@@ -383,29 +327,6 @@ void Kalman_init(void){
           Kal_element_inv,
           Q_mat);
 }
-
-
-// void Kalman_com(void)
-// {
-//   Kalman_PID(
-//             Sigma_Yn_est,
-//             Sigma_Yn_pre,
-//             last_Sigma_Yn_pre,
-//             mu_Yn_pre,
-//             last_mu_Yn_pre,
-//             mu_Yn_est,
-//             Q_mat,
-//             observation_mat,
-//             observation_mat_transposed,
-//             u_n,
-//             control_mat,
-//             unit_mat,
-//             system_mat,
-//             Kal_element_inv,
-//             K,
-//             yn_mat,
-//             Q_k,error,r,last_error,Control_T,de,ie,observe_y,Kp,Ki,Kd,u);
-// }
 
 
 //Runge-Kutta Method 

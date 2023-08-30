@@ -98,6 +98,18 @@ PID phi_pid;
 PID theta_pid;
 PID psi_pid;
 
+//OpenMV通信用
+char buffer[BUFFER_SIZE];
+char x_buffer[16];
+char angle_buffer[16];
+int buffer_index = 0;
+uint8_t print_flag = 0;
+int x_diff = 0;
+int angle_diff = 0;
+int buffer_len = 0;
+int canma = 0;
+std::string info;
+
 void loop_400Hz(void);
 void rate_control(void);
 void sensor_read(void);
@@ -119,7 +131,8 @@ void Hovering(void);
 float lotate_altitude(float l_distance);
 void lotate_altitude_init(float Theta,float Psi,float Phi);
 void test_Hovering(void);
-
+void processReceiveData();
+void receiveData(char c);
 #define AVERAGE 2000
 #define KALMANWAIT 6000
 
@@ -131,7 +144,7 @@ void loop_400Hz(void)
   S_time=time_us_32();
   
   //割り込みフラグリセット
-  pwm_clear_irq(2);
+  pwm_clear_irq(7);
 
 
   if (Arm_flag==0)
@@ -868,6 +881,24 @@ void gyroCalibration(void)
   Rbias=sumr/N;
 }
 
+//OpenMV通信用
+void processReceiveData(){
+  std::string info(buffer,sizeof(buffer));
+  // printf("%s",buffer);
+  //printf("%s",info.c_str());
+}
+void receiveData(char c){
+  if (buffer_index < BUFFER_SIZE - 1){
+    buffer[buffer_index++] = c;
+  }
+  //終了条件のチェック
+  if (c == '\n'){
+    buffer[buffer_index] = '\0'; //文字列の終端にヌル文字を追加
+    processReceiveData();
+    buffer_index = 0; //バッファをリセット
+  }
+}
+
 void sensor_read(void)
 {
   float mx1, my1, mz1, mag_norm, acc_norm, rate_norm;
@@ -934,7 +965,6 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
   My/=mag_norm;
   Mz/=mag_norm;
  
-  // start_time = time_us_64();
   if(isDataReady == 0)
   {
     Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
@@ -954,72 +984,20 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
     // z_acc  = Az-9.80665;
     //input = Kalman_PID(lotated_distance,z_acc);
   }
-  
+  //OpenMV通信用
+  //start_time = time_us_64();
+  while (uart_is_readable(UART_ID2)){
+    char c = uart_getc(UART_ID2);
+    receiveData(c);
+  }
+  printf("%s",buffer);
+  buffer_len = sizeof(buffer)/sizeof(buffer[0]);
+  for (int i = 1; i buffer_len-1; i++){
+    if ()
+  }
   // current_time = time_us_64();
   // func_time = (current_time - start_time)/1000000.0;
-  // count_up = count_up + 1;
-
-
-  // if(range_flag==0)
-  // {
-  //   //write_byte_data_at(VL53L0X_REG_SYSRANGE_START, 0x01);
-  //   VL53L1_WrByte(dev,VL53L0X_REG_SYSRANGE_START,0x01);
-  //   range_flag = 1;
-  // }
-  //val = read_byte_data_at(VL53L0X_REG_RESULT_RANGE_STATUS);
-  // val = VL53L1_RdByte(dev,VL53L0X_REG_RESULT_RANGE_STATUS);
-
-  // VL53L1_RdByte(dev,VL53L0X_REG_RESULT_RANGE_STATUS,&val);
-  // if (val & 0x01)
-  // {
-  //   range_flag = 0;
-  //read_block_data_at(dev,0x14, 12,&range_gbuf);
-  // Range = makeuint16(range_gbuf[11], range_gbuf[10]);
-  // } 
-
-  // altitude_count = altitude_count + 1;
-  // if(altitude_count == 20){
-  //   altitude_count = 0;
-  //   if(isDataReady == 0)
-  //   {
-  //     Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
-  //     // uint8_t Temp;
-  //     // uint8_t IntPol;
-  //     // Temp = 0;
-  //     // IntPol = 0;
-
-  //     //status |= VL53L1X_GetInterruptPolarity(dev, &IntPol);
-  //     //VL53L1X_GetInterruptPolarityの処理
-  //     // uint8_t Temp2;
-
-  //     // status |= VL53L1_RdByte(dev, GPIO_HV_MUX__CTRL, &Temp2);
-  //     // Temp2 = Temp2 & 0x10;
-  //     // IntPol = !(Temp2>>4);
-  //     //printf("Temp(getInterrupt) : %d\n",pInterruptPolarity);
-  //     //ここまでVL53L1X_GetInterruptPolarityの処理
-
-  //     //status |= VL53L1_RdByte(dev, GPIO__TIO_HV_STATUS, &Temp);
-  //     /* Read in the register to check if a new value is available */
-  //     //printf("status (CheckForDataReady) : %d\n" , status);
-  //     //printf("Temp and IntPol : %d , %d \n", (Temp&1),IntPol);
-  //     // if (status == 0){
-  //     //   if ((Temp & 1) == IntPol)
-  //     //     isDataReady = 1;
-  //     //   else
-  //     //     isDataReady = 0;
-  //     // }
-  //   }
-  //   else if (isDataReady == 1)
-  //   {
-  //     //data_count = data_count + 1;
-  //     isDataReady = 0;
-  //     Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
-  //     Status = VL53L1X_GetDistance(dev,&distance);
-  //     Status = VL53L1X_ClearInterrupt(dev);
-  //     // z_acc  = Az;
-  //     // input = Kalman_PID((float)distance,Ax);
-  //   }
-  // }
+  // printf("%9.6f \n", func_time);
 }
 
 void variable_init(void)

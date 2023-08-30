@@ -22,6 +22,14 @@
 #define CH6MAX 1904
 #define CH6MIN 144
 
+#define UART_ID2 uart1
+#define BAUD_RATE2 115200
+#define DATA_BITS2 8
+#define STOP_BITS2 1
+#define PARITY2  UART_PARITY_NONE
+#define UART_TX_PIN2 4
+#define UART_RX_PIN2 5
+
 
 //０番と1番ピンに接続
 #define UART_TX_PIN 0

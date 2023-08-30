@@ -10,6 +10,7 @@
 #include <Eigen/Dense>
 #include "ekf.hpp"
 #include <math.h>
+#include "radio.hpp"
 
 typedef unsigned char byte;
 using Eigen::MatrixXd;
@@ -19,6 +20,7 @@ using Eigen::PartialPivLU;
 using namespace Eigen;
 
 #define BATTERY_VOLTAGE (11.1)
+#define BUFFER_SIZE 16
 
 
 //グローバル関数の宣言
@@ -40,6 +42,8 @@ extern float z_acc;
 extern float func_time;
 extern float T_ref;
 extern uint64_t count_up;
+// extern char buffer[BUFFER_SIZE];
+// extern uint8_t print_flag;
 class PID
 {
   private:

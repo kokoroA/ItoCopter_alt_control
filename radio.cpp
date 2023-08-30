@@ -23,22 +23,28 @@ void radio_init(void){
 
     // UARTを基本の通信速度で設定
     uart_init(UART_ID, 2400);
+    uart_init(UART_ID2,BAUD_RATE2);
 
     // 指定のGPIOをUARTのTX、RXピンに設定する
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN2, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN2, GPIO_FUNC_UART);
 
     //指定のUARTを指定の通信速度に設定する
     int actual = uart_set_baudrate(UART_ID, BAUD_RATE);
 
     //UART flow control CTS/RTSを使用しない設定
     uart_set_hw_flow(UART_ID, false, false);
+    uart_set_hw_flow(UART_ID2, false, false);
 
     //通信フォーマットの設定
     uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
+    uart_set_format(UART_ID2, DATA_BITS2, STOP_BITS2, PARITY2);
 
     // Turn off FIFO's - we want to do this character by character
     uart_set_fifo_enabled(UART_ID, true);
+    uart_set_fifo_enabled(UART_ID2, true);
 
     // Set up a RX interrupt
     // We need to set up the handler first
