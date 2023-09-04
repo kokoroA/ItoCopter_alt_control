@@ -220,18 +220,18 @@ float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float delta
   u2 = -w0*deltaPhi*h_horizontal;
   u3 = 1/cos(theta0) * deltaR * h_horizontal;
   //Xの予測
-  Xn_pre_1 = f11*Xn_est_1 + f12*Xn_est_2 +f13*Xn_est_3 + u1;
-  Xn_pre_2 = f21*Xn_est_1 + f22*Xn_est_2 +f23*Xn_est_3 + u2;
-  Xn_pre_3 = f31*Xn_est_1 + f32*Xn_est_2 +f33*Xn_est_3 + u3;
+  Xn_pre_1 = (f11*Xn_est_1) + (f12*Xn_est_2) +(f13*Xn_est_3) + u1;
+  Xn_pre_2 = (f21*Xn_est_1) + (f22*Xn_est_2) +(f23*Xn_est_3)+ u2;
+  Xn_pre_3 = (f31*Xn_est_1) + (f32*Xn_est_2) +(f33*Xn_est_3) + u3;
   //誤差共分散の予測
   p11_pre = (f11*f11*p11_est) + q1;
-  p12_pre = f11*f21*p12_est + f21*p12_est + f11*f23*p13_est ;
+  p12_pre = (f11*f21*p12_est) + (f21*p12_est) + (f11*f23*p13_est) ;
   p13_pre = f11*p13_est;
-  p21_pre = f11*(f21*p11_est + p21_est + f23 * p31_est);
-  p22_pre = f21*(f21*p11_est + p21_est + f23*p31_est) + f21*p12_est + p22_est + f23*p32_est + (f23*(f21*p13_est + p23_est + f23*p33_est)) + q2; 
-  p23_pre = f21*p13_est + p23_est + f23*p33_est; 
+  p21_pre = f11*((f21*p11_est) + p21_est + (f23 * p31_est));
+  p22_pre = f21*((f21*p11_est) + p21_est + (f23*p31_est)) + (f21*p12_est) + p22_est + (f23*p32_est) + (f23*((f21*p13_est) + p23_est + (f23*p33_est))) + q2; 
+  p23_pre = (f21*p13_est) + p23_est + (f23*p33_est); 
   p31_pre = p31_est*f11; 
-  p32_pre = p31_est*f21 + p32_est + p33_est*f23; 
+  p32_pre = (p31_est*f21) + p32_est + (p33_est*f23); 
   p33_pre = p33_est + q3; 
   //イノベーション
   e1 = camera_y - Xn_pre_2;
@@ -245,26 +245,26 @@ float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float delta
   s_i12 = -s12 / (s11*s22 - s12*s21);
   s_i21 = -s21 / (s11*s22 - s12*s21);
   s_i22 = s11 / (s11*s22 - s12*s21);
-  K11 = p12_pre * s_i11 + p13_pre * s_i21;
-  K12 = p12_pre * s_i12 + p13_pre * s_i22;
-  K21 = p22_pre * s_i11 + p23_pre * s_i21;
-  K22 = p22_pre * s_i12 + p23_pre * s_i22;
-  K31 = p32_pre * s_i11 + p33_pre * s_i21;
-  K32 = p32_pre * s_i12 + p33_pre * s_i22;
+  K11 = (p12_pre * s_i11) + (p13_pre * s_i21);
+  K12 = (p12_pre * s_i12) + (p13_pre * s_i22);
+  K21 = (p22_pre * s_i11) + (p23_pre * s_i21);
+  K22 = (p22_pre * s_i12) + (p23_pre * s_i22);
+  K31 = (p32_pre * s_i11) + (p33_pre * s_i21);
+  K32 = (p32_pre * s_i12) + (p33_pre * s_i22);
   //状態の推定
-  Xn_est_1 = Xn_pre_1 + K11*e1 + K12*e2;
-  Xn_est_2 = Xn_pre_2 + K21*e1 + K22*e2;
-  Xn_est_3 = Xn_pre_3 + K31*e1 + K32*e2;
+  Xn_est_1 = Xn_pre_1 + (K11*e1 )+ (K12*e2);
+  Xn_est_2 = Xn_pre_2 + (K21*e1) + (K22*e2);
+  Xn_est_3 = Xn_pre_3 + (K31*e1) + (K32*e2);
   //誤差の共分散の推定
-  p11_est = p11_pre -K11*p21_pre -K12*p31_pre;
-  p12_est = p12_pre - K11*p22_pre -K12*p32_pre;
-  p13_est = p13_pre - K11*p23_pre - K12*p33_pre;
-  p21_est = p21_pre * (1 - K21) - K22*p31_pre;
-  p22_est = p22_pre * (1-K21) - K22*p32_pre; 
-  p23_est = p23_pre*(1 - K21) - K22*p33_pre;
-  p31_est = -K31*p21_pre + p31_pre*(1 - K32);
-  p32_est = -K31*p22_pre + p32_pre*(1 - K32);
-  p33_est = -K31*p23_pre + p33_pre*(1 - K32);
+  p11_est = p11_pre -(K11*p21_pre) -(K12*p31_pre);
+  p12_est = p12_pre - (K11*p22_pre) -(K12*p32_pre);
+  p13_est = p13_pre - (K11*p23_pre) - (K12*p33_pre);
+  p21_est = p21_pre * (1 - K21) - (K22*p31_pre);
+  p22_est = p22_pre * (1-K21) - (K22*p32_pre); 
+  p23_est = p23_pre*(1 - K21) - (K22*p33_pre);
+  p31_est = -(K31*p21_pre) + (p31_pre*(1 - K32));
+  p32_est = -(K31*p22_pre) + (p32_pre*(1 - K32));
+  p33_est = -(K31*p23_pre) + (p33_pre*(1 - K32));
 
   return 1;
 }

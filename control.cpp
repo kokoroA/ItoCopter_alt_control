@@ -887,7 +887,8 @@ void processReceiveData(){
   }
   // printf("x : %9.6f\n",x_diff);
   // printf("angle : %9.6f\n",angle_diff);
-  Kalman_holizontal(x_diff,angle_diff,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
+  // Kalman_holizontal(x_diff,angle_diff,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
+    Kalman_holizontal(0,0,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
   printf("est velocity: %9.6f\n",Xn_est_1);
   printf("y : %9.6f, est : %9.6f\n",x_diff,Xn_est_2);
   printf("psi : %9.6f, est : %9.6f\n",angle_diff,Xn_est_3);
