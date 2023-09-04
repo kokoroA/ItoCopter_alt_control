@@ -31,8 +31,8 @@ int main(void)
 
   //Initilize Control
   control_init();
-  Kalman_init();
-  initialize_Altitude();
+  // Kalman_init();
+  // initialize_Altitude();
 
   //Initialize PWM
   //Start 400Hz Interval

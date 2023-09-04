@@ -100,15 +100,10 @@ PID psi_pid;
 
 //OpenMV通信用
 char buffer[BUFFER_SIZE];
-char x_buffer[16];
-char angle_buffer[16];
 int buffer_index = 0;
 uint8_t print_flag = 0;
-int x_diff = 0;
-int angle_diff = 0;
-int buffer_len = 0;
-int canma = 0;
-std::string info;
+float x_diff = 0;
+float angle_diff = 0;
 
 void loop_400Hz(void);
 void rate_control(void);
@@ -535,7 +530,6 @@ void rate_control(void)
     auto_mode =0;
     auto_mode_count = 0;
     T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
-
   }
 
   if (auto_mode ==1){
@@ -548,10 +542,8 @@ void rate_control(void)
         //Autofly時はoff
         T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
       }
-
       // Auto_fly();
       // Auto_landing();
-      // T_ref = T_stick + (input);
       if (mu_Yn_est(1,0) < 200){
         T_ref = T_stick - 0.5;
       }
@@ -610,15 +602,12 @@ void rate_control(void)
   FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
   RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
   RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
+
   // FR_duty = (T_ref)*0.0901;
   // FL_duty = (T_ref )*0.0901;
   // RR_duty = (T_ref)*0.0901;
   // RL_duty = (T_ref)*0.0901;
-  //FR_duty = (T_ref)*0.0901;
-  //FL_duty = (T_ref)*0.0901;
-  //RR_duty = (T_ref)*0.0901;
-  //RL_duty = (T_ref)*0.0901;
-  
+
   float minimum_duty=0.1;
   const float maximum_duty=0.95;
   minimum_duty = Disable_duty;
@@ -883,17 +872,34 @@ void gyroCalibration(void)
 
 //OpenMV通信用
 void processReceiveData(){
-  std::string info(buffer,sizeof(buffer));
-  // printf("%s",buffer);
-  //printf("%s",info.c_str());
+  // printf("%s \n",buffer);
+  char* clear_data = buffer;
+  clear_data++;//(をスキップ
+  clear_data[strlen(clear_data) -1 ] = '\0';//)をヌル文字に置き換え
+  char* token;
+  token = strtok(clear_data,",");
+  if (token != NULL){
+    x_diff = atof(token);
+  }
+  token = strtok(NULL,",");
+  if (token != NULL){
+    angle_diff = atof(token);
+  }
+  // printf("x : %9.6f\n",x_diff);
+  // printf("angle : %9.6f\n",angle_diff);
+  Kalman_holizontal(x_diff,angle_diff,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
+  printf("est velocity: %9.6f\n",Xn_est_1);
+  printf("y : %9.6f, est : %9.6f\n",x_diff,Xn_est_2);
+  printf("psi : %9.6f, est : %9.6f\n",angle_diff,Xn_est_3);
 }
 void receiveData(char c){
   if (buffer_index < BUFFER_SIZE - 1){
     buffer[buffer_index++] = c;
   }
   //終了条件のチェック
-  if (c == '\n'){
-    buffer[buffer_index] = '\0'; //文字列の終端にヌル文字を追加
+  // if (c == '\n'){
+  if (c == ')'){
+    //buffer[buffer_index] = '\0'; //文字列の終端にヌル文字を追加
     processReceiveData();
     buffer_index = 0; //バッファをリセット
   }
@@ -914,7 +920,7 @@ void sensor_read(void)
   My0 = magnetic_field_mgauss[1];
   Mz0 =-magnetic_field_mgauss[2];
 
-  
+
   acc_norm = sqrt(Ax*Ax + Ay*Ay + Az*Az);
   if (acc_norm>250.0) OverG_flag = 1;
   Acc_norm = acc_filter.update(acc_norm);
@@ -965,35 +971,32 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
   My/=mag_norm;
   Mz/=mag_norm;
  
-  if(isDataReady == 0)
-  {
-    Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
-  }
-  else if (isDataReady == 1)
-  {
-    //data_count = data_count + 1;
-    isDataReady = 0;
-    Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
-    Status = VL53L1X_GetDistance(dev,&distance);
-    Status = VL53L1X_ClearInterrupt(dev);
-    // z_acc  = Az-9.80665;
-    z_acc = Az - 9.76548;
-    lotate_altitude_init(Theta,Psi,Phi);
-    lotated_distance = lotate_altitude(distance);
-    Kalman_PID(lotated_distance,z_acc);
-    // z_acc  = Az-9.80665;
-    //input = Kalman_PID(lotated_distance,z_acc);
-  }
+  // if(isDataReady == 0)
+  // {
+  //   Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
+  // }
+  // else if (isDataReady == 1)
+  // {
+  //   //data_count = data_count + 1;
+  //   isDataReady = 0;
+  //   Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
+  //   Status = VL53L1X_GetDistance(dev,&distance);
+  //   Status = VL53L1X_ClearInterrupt(dev);
+  //   // z_acc  = Az-9.80665;
+  //   z_acc = Az - 9.76548;
+  //   lotate_altitude_init(Theta,Psi,Phi);
+  //   lotated_distance = lotate_altitude(distance);
+  //   Kalman_PID(lotated_distance,z_acc);
+  //   // z_acc  = Az-9.80665;
+  //   //input = Kalman_PID(lotated_distance,z_acc);
+  // }
+
   //OpenMV通信用
   //start_time = time_us_64();
+
   while (uart_is_readable(UART_ID2)){
     char c = uart_getc(UART_ID2);
     receiveData(c);
-  }
-  printf("%s",buffer);
-  buffer_len = sizeof(buffer)/sizeof(buffer[0]);
-  for (int i = 1; i buffer_len-1; i++){
-    if ()
   }
   // current_time = time_us_64();
   // func_time = (current_time - start_time)/1000000.0;

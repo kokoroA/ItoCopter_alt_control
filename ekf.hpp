@@ -43,7 +43,7 @@ extern Matrix<float, 1,1> yn_mat;
 extern Matrix<float, 1 ,1> k_inv;
 extern Matrix<float, 1,1> mu_Yn_est_par;
 extern Matrix<float, 2,1> mu_Yn_est_par2;
-extern float Q_k,Q_k_v,stdv_Q_v,error,r,last_error,Control_T,de,ie,observe_y,Kp,Ki,Kd,u,h_kalman,m,stdv_R,stdv_Q,integral,integral_v,differential,differential_v,eta,u_v,Xn_est_1,Xn_est_2;
+extern float Q_k,Q_k_v,stdv_Q_v,error,r,last_error,Control_T,de,ie,observe_y,Kp,Ki,Kd,u,h_kalman,m,stdv_R,stdv_Q,integral,integral_v,differential,differential_v,eta,u_v,Xn_est_1,Xn_est_2,Xn_est_3;
 
 //Extended Kalman Filter
 uint8_t ekf( Matrix<float, 7, 1> &xe,
@@ -86,7 +86,8 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
 //                     Matrix<float, 1,1> &yn_mat,
 //                     float &error,float &r,float &last_error,float &Control_T,float &de,float &ie);
 float Kalman_PID(float observe_y,float Ax);
-float Kalman_holizontal(float camera_y,float camera_psi);
+float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float deltaR,float deltaPhi);
+//float Kalman_holizontal(float camera_y,float camera_psi);
 float alt_PID(float ref_alt);
 // float Kalman_PID(float observe_y,float Ax);
 void Kalman_init(void);
