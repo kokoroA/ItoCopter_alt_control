@@ -19,6 +19,16 @@ using Eigen::PartialPivLU;
 using namespace Eigen;
 
 extern float MN,ME,MD;
+// ( Matrix<float, 3 ,3> &Sigma_Yn_est_v,
+//                     Matrix<float, 3,3> &Sigma_Yn_pre_v,
+//                     Matrix<float, 1,3> &observation_mat_v,
+//                     Matrix<float, 3,1> &observation_mat_transposed_v,
+//                     Matrix<float, 3,1> &control_mat_v,
+//                     Matrix<float, 3,3> &unit_mat_v,
+//                     Matrix<float, 3,3> &system_mat_v,
+//                     Matrix<float, 2, 2> &Kal_element_v,
+//                     Matrix<float, 2, 2> &R_mat_v,
+//                     Matrix<float, 3,3> &Q_mat_v)
 //ローカルでしか使ってないグローバル変数を削除
 extern Matrix<float, 2 ,2> Sigma_Yn_est;
 extern Matrix<float, 2,2> Sigma_Yn_pre;
@@ -43,7 +53,7 @@ extern Matrix<float, 1,1> yn_mat;
 extern Matrix<float, 1 ,1> k_inv;
 extern Matrix<float, 1,1> mu_Yn_est_par;
 extern Matrix<float, 2,1> mu_Yn_est_par2;
-extern float Q_k,Q_k_v,stdv_Q_v,error,r,last_error,Control_T,de,ie,observe_y,Kp,Ki,Kd,u,h_kalman,m,stdv_R,stdv_Q,integral,integral_v,differential,differential_v,eta,u_v,Xn_est_1,Xn_est_2,Xn_est_3;
+extern float Xn_est_1,Xn_est_2,Xn_est_3;
 
 //Extended Kalman Filter
 uint8_t ekf( Matrix<float, 7, 1> &xe,
@@ -56,6 +66,17 @@ uint8_t ekf( Matrix<float, 7, 1> &xe,
              Matrix<float, 7, 6> G,
              Matrix<float, 3, 1> beta,
              float dt);
+
+// float initialize_v( Matrix<float, 3 ,3> &Sigma_Yn_est_v,
+//                     Matrix<float, 3,3> &Sigma_Yn_pre_v,
+//                     Matrix<float, 1,3> &observation_mat_v,
+//                     Matrix<float, 3,1> &observation_mat_transposed_v,
+//                     Matrix<float, 3,1> &control_mat_v,
+//                     Matrix<float, 3,3> &unit_mat_v,
+//                     Matrix<float, 3,3> &system_mat_v,
+//                     Matrix<float, 2, 2> &Kal_element_v,
+//                     Matrix<float, 2, 2> &R_mat_v,
+//                     Matrix<float, 3,3> &Q_mat_v);
 
 float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
                     Matrix<float, 2,2> &Sigma_Yn_pre,
@@ -86,10 +107,11 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
 //                     Matrix<float, 1,1> &yn_mat,
 //                     float &error,float &r,float &last_error,float &Control_T,float &de,float &ie);
 float Kalman_PID(float observe_y,float Ax);
+float Kalman_y_mat(float camera_y,float camera_psi);
 float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float deltaR,float deltaPhi);
 //float Kalman_holizontal(float camera_y,float camera_psi);
 float alt_PID(float ref_alt);
 // float Kalman_PID(float observe_y,float Ax);
 void Kalman_init(void);
-void Kalman_com(void);
+void Kalman_init_v(void);
 #endif
