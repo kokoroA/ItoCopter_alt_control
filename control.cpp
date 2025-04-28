@@ -42,9 +42,19 @@ Matrix<float, 7 ,6> G;
 Matrix<float, 3 ,1> Beta;
 
 //Auto_fly
-uint64_t count_up = 0;
+float hov_flag = 0;
+// float T_out = 0;
+// float T_ref2 = 0;
+// float base_stick = 0;
+float stick = 0;
+// float last_stick = 0;
+// float last_T_stick = 0;
+float start_time = time_us_64();
+uint64_t count_up = 7;
+float Kalman_alt = 0;
+float stop_flag = 0;
+float switch_alt = 0;
 float auto_mode_count = 0;
-float start_time;
 float current_time;
 float func_time;
 float z_acc;
@@ -58,7 +68,7 @@ uint8_t val = 0;
 uint8_t range_gbuf[16];
 float range_flag = 0;
 uint16_t altitude_count = 0;
-float stick;
+// float stick;
 float auto_mode = 0;
 float ideal;
 float hove_distance;
@@ -79,7 +89,8 @@ uint8_t Logflag=0;
 volatile uint8_t Logoutputflag=0;
 float Log_time=0.0;
 // const uint8_t DATANUM=48; //Log Data Number
-const uint8_t DATANUM=1; //Log Data Number
+const uint8_t DATANUM=6; //Log Data Number
+// const uint8_t DATANUM=40;
 const uint32_t LOGDATANUM=48000;
 float Logdata[LOGDATANUM]={0.0};
 
@@ -118,8 +129,8 @@ uint8_t lock_com(void);
 uint8_t logdata_out_com(void);
 void printPQR(void);
 void Auto_fly(void);
-void Auto_fly_initialize(void);
-void altitude_rate_control(void);
+// void Auto_fly_initialize(void);
+// void altitude_rate_control(void);
 void Auto_takeoff(void);
 void Auto_landing(void);
 void Hovering(void);
@@ -447,51 +458,66 @@ void Auto_fly(void){
   else if (flying_mode == 3){
     Auto_landing();
   }
-  // else if (flying_mode == 4){
-
-  // }
-
 }
 
 //ホバリング
 void Hovering(void){
   //実験なので4秒
   //本番はゴールを見つけたら着陸モード
-  if (hove_time < 4.0)
+  if (hove_time < 15)
   {
-    input = alt_PID(hove_distance);
-    hove_time + 0.03;
+    input = alt_PID(ideal);
+    T_ref = T_stick + (input);
+    hove_time = hove_time + 0.01;
   }
   else{
     flying_mode = 3;
+    //Auto_landing();
   }
+
+  // input = alt_PID(ideal);
+  // T_ref = T_stick + (input);
 }
 
 //自動着陸
 void Auto_landing(void){
-  if (mu_Yn_est(1,0) < 50)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
+  if (Kalman_alt > 250)
   {
-    motor_stop();
-    flying_mode = 4;
+    ideal = ideal - 0.45;//高度の目標値更新のコード
+    if (ideal <= 0){
+      ideal = 0;
+    }
+    input = alt_PID(ideal);
+    T_ref = T_stick + (input);
+  }
+  else if(Kalman_alt <= 250){
+    T_ref = T_ref - 0.03;
   }
   else{
-    ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
-    input = alt_PID(ideal);
+    stop_flag = 1;
   }
-  ideal = mu_Yn_est(1,0) - 0.1;//高度の目標値更新のコード
-  input = alt_PID(ideal);
 }
 
 //自動離陸
 void Auto_takeoff(void){
-  if (mu_Yn_est(1,0) >= 400)
-  {
-    hove_distance = mu_Yn_est(1,0);
-    flying_mode = 2;
+
+  if (Kalman_alt <= 250){
+    if (T_ref < 3.4){
+      T_stick = T_stick + 0.1;
+      T_ref = T_stick;
+    }
+    else {
+      T_stick = T_stick + 0.002;
+      T_ref = T_stick;
+    }
   }
-  else{
-    ideal = mu_Yn_est(1,0) + 1;
-    input = alt_PID(ideal);
+
+  if (Kalman_alt >= 650){//ここ変えてみる
+    ideal = 700;
+    // input = alt_PID(ideal);
+    // T_ref = T_stick + (input);
+    //Hovering();
+    flying_mode = 2;
   }
 }
 
@@ -520,43 +546,94 @@ void rate_control(void)
   r_ref = Rref;
 
   //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+  // printf("T_ref : %9.6f \n",T_ref);
 
   if(Chdata[4] > (CH5MAX + CH5MIN)*0.5){
     auto_mode =1;
-    flying_mode = 1;
+    //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
   }
   else{
-    flying_mode = 0;
     auto_mode =0;
     auto_mode_count = 0;
     T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
   }
 
   if (auto_mode ==1){
-    count_up += 1;
-    if (count_up == 20){
+    if (count_up >= 8){
       count_up = 0;
       if(auto_mode_count ==0){
         auto_mode_count = 1;
-        //ideal = mu_Yn_est(1,0);
+        flying_mode = 1;
+        ideal = Kalman_alt;
+        //switch_alt = mu_Yn_est(1,0);
         //Autofly時はoff
         T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+        //T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+        //base_stick = (Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
       }
-      // Auto_fly();
-      // Auto_landing();
-      if (mu_Yn_est(1,0) < 200){
-        T_ref = T_stick - 0.5;
-      }
-      if (mu_Yn_est(1,0) < 150)//自動離着陸終了の処理(ある高度まで行ったらモーターを止める)
-      {
-        motor_stop();
-      }
-      else{
-        ideal = mu_Yn_est(1,0) - 3;//高度の目標値更新のコード
-        input = alt_PID(ideal);
-        T_ref = T_stick + (input);
-      }
+      Auto_fly();
+      //Auto_takeoff();
+      //Auto_landing();
+      //Hovering();
       // input = alt_PID(ideal);
+      // T_ref = T_stick + (input);
+      //離陸処理
+      // if (Kalman_alt <= 250){
+
+      //   if (T_ref < 3.4){
+      //     T_stick = T_stick + 0.1;
+      //     T_ref = T_stick;
+      //   }
+      //   else {
+      //     T_stick = T_stick + 0.002;
+      //     T_ref = T_stick;
+      //   }
+
+      // }
+    
+      // if (Kalman_alt >= 450){
+      //   ideal = 500;
+      //   input = alt_PID(ideal);
+      //   T_ref = T_stick + (input);
+      // }
+
+  
+      //着陸処理
+      //Auto_landing();
+      // if (Kalman_alt > 250)
+      // {
+      //   //stop_flag = 0;
+      //   //ideal -= 0.25;
+      //   ideal = ideal - 0.45;//高度の目標値更新のコード
+      //   if (ideal <= 0){
+      //     ideal = 0;
+      //   }
+      //   input = alt_PID(ideal);
+      //   T_ref = T_stick + (input);
+      //   //T_stick += input;
+      //   // T_stick = T_stick + input;
+      //   // T_ref = T_stick;
+      //   // printf("Kalman_alt : %9.6f \n",Kalman_alt);
+      //   // printf("ideal : %9.6f \n",ideal);
+      //   // printf("T_stick : %9.6f \n",T_stick);
+      //   // printf("T_ref : %9.6f \n",T_ref);
+      // }
+      // else if(Kalman_alt <= 250){
+      //   T_ref = T_ref - 0.035;
+      // }
+      // else{
+      //   // motor_stop();
+      //   stop_flag = 1;
+      //   // printf("%9.6f \n",motor_flag);
+      // }
+
+      //ホバリング処理
+
+      //スイッチをonにした時点の高度を保つ高度制御
+      // input = alt_PID(ideal);
+      // T_ref = T_stick + (input);
+      //Hovering();
+
       // if (T_stick < 1.8) {
       //   T_ref = 2.1 + input;
       // }
@@ -564,26 +641,10 @@ void rate_control(void)
       //   T_ref = T_stick + (input);
       // }
     }
-    // if(auto_mode_count ==0){
-    //   auto_mode_count = 1;
-    //   ideal = mu_Yn_est(1,0);
-    //   //Autofly時はoff
-    //   T_stick = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
-    // }
-
-    // // Auto_fly();
-    // // Auto_landing();
-    // // T_ref = T_stick + (input);
-
-    // input = alt_PID(ideal);
-    // if (T_stick < 1.8) {
-    //   T_ref = 2.1 + input;
-    // }
-    // else{
-    //   T_ref = T_stick + (input);
-    // }
+    count_up += 1;
   }
 
+  // current_time = time_us_64();
   //Error
   p_err = p_ref - p_rate;
   q_err = q_ref - q_rate;
@@ -597,7 +658,8 @@ void rate_control(void)
   //Motor Control
   // 1250/11.1=112.6
   // 1/11.1=0.0901
-  
+  //Yaw逆だったらRの符号を逆にする
+
   FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
   FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
   RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
@@ -641,6 +703,9 @@ void rate_control(void)
     Theta_bias = Theta;
     Psi_bias   = Psi;
   }
+  else if (stop_flag == 1){
+    motor_stop();
+  }
   else
   {
     if (OverG_flag==0){
@@ -649,7 +714,6 @@ void rate_control(void)
       set_duty_rr(RR_duty);
       set_duty_rl(RL_duty);
     }
-    else motor_stop();
     //printf("%12.5f %12.5f %12.5f %12.5f\n",FR_duty, FL_duty, RR_duty, RL_duty);
   }
  
@@ -745,7 +809,13 @@ void logging(void)
       LogdataCounter=0;
     }
     if(LogdataCounter+DATANUM<LOGDATANUM){
-      Logdata[LogdataCounter++]=mu_Yn_est(1,0); //1
+      Logdata[LogdataCounter++]=distance;
+      Logdata[LogdataCounter++]=mu_Yn_est(1,0);
+      Logdata[LogdataCounter++]=ideal; 
+      Logdata[LogdataCounter++]=input;
+      Logdata[LogdataCounter++]=T_ref;
+      Logdata[LogdataCounter++]=flying_mode;
+      // Logdata[LogdataCounter++]=stop_flag;//5
     }
     // if(LogdataCounter+DATANUM<LOGDATANUM)
     // {
@@ -793,14 +863,14 @@ void logging(void)
     //   Logdata[LogdataCounter++]=Acc_norm;                 //38
     //   Logdata[LogdataCounter++]=distance;                 //39
     //   Logdata[LogdataCounter++]=mu_Yn_est(1,0);           //40
-    //   Logdata[LogdataCounter++]=mu_Yn_est(0,0);           //41
-    //   Logdata[LogdataCounter++]=FR_duty;                   //42
-    //   Logdata[LogdataCounter++]=FL_duty;                    //43
-    //   Logdata[LogdataCounter++]=RR_duty;                  //44
-    //   Logdata[LogdataCounter++]=RL_duty;                  //45
-    //   Logdata[LogdataCounter++]=input;                 //46
-    //   Logdata[LogdataCounter++]=u;                  //47
-    //   Logdata[LogdataCounter++]=ideal;              //48
+    //   // Logdata[LogdataCounter++]=mu_Yn_est(0,0);           //41
+    //   // Logdata[LogdataCounter++]=FR_duty;                   //42
+    //   // Logdata[LogdataCounter++]=FL_duty;                    //43
+    //   // Logdata[LogdataCounter++]=RR_duty;                  //44
+    //   // Logdata[LogdataCounter++]=RL_duty;                  //45
+    //   // Logdata[LogdataCounter++]=input;                 //46
+    //   // Logdata[LogdataCounter++]=u;                  //47
+    //   // Logdata[LogdataCounter++]=ideal;              //48
     // }
     else Logflag=2;
   }
@@ -888,7 +958,6 @@ void processReceiveData(){
   // printf("x : %9.6f\n",x_diff);
   // printf("angle : %9.6f\n",angle_diff);
   Kalman_holizontal(x_diff,angle_diff,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
-  //Kalman_holizontal(0,0,(Wp - Pbias),(Wr - Rbias),(Phi - Phi_bias));
   printf("est velocity: %9.6f\n",Xn_est_1);
   printf("y : %9.6f, est : %9.6f\n",x_diff,Xn_est_2);
   printf("psi : %9.6f, est : %9.6f\n",angle_diff,Xn_est_3);
@@ -972,33 +1041,35 @@ const float zoom[3]={0.003077277151877191, 0.0031893151610213463, 0.003383279497
   My/=mag_norm;
   Mz/=mag_norm;
  
-  // if(isDataReady == 0)
-  // {
-  //   Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
-  // }
-  // else if (isDataReady == 1)
-  // {
-  //   //data_count = data_count + 1;
-  //   isDataReady = 0;
-  //   Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
-  //   Status = VL53L1X_GetDistance(dev,&distance);
-  //   Status = VL53L1X_ClearInterrupt(dev);
-  //   // z_acc  = Az-9.80665;
-  //   z_acc = Az - 9.76548;
-  //   lotate_altitude_init(Theta,Psi,Phi);
-  //   lotated_distance = lotate_altitude(distance);
-  //   Kalman_PID(lotated_distance,z_acc);
-  //   // z_acc  = Az-9.80665;
-  //   //input = Kalman_PID(lotated_distance,z_acc);
-  // }
+  if(isDataReady == 0)
+  {
+    Status = VL53L1X_CheckForDataReady(dev,&isDataReady);
+  }
+  else if (isDataReady == 1)
+  {
+    //data_count = data_count + 1;
+    isDataReady = 0;
+    Status = VL53L1X_GetRangeStatus(dev,&rangeStatus);
+    Status = VL53L1X_GetDistance(dev,&distance);
+    Status = VL53L1X_ClearInterrupt(dev);
+    // z_acc  = Az-9.80665;
+    z_acc = Az - 9.76548;
+    lotate_altitude_init(Theta,Psi,Phi);
+    lotated_distance = lotate_altitude(distance);
+    Kalman_alt = Kalman_PID(lotated_distance,z_acc);
+    //printf("%9.6f \n",mu_Yn_est(1,0));
+    // z_acc  = Az-9.80665;
+    //input = Kalman_PID(lotated_distance,z_acc);
+  }
 
   //OpenMV通信用
   //start_time = time_us_64();
 
-  while (uart_is_readable(UART_ID2)){
-    char c = uart_getc(UART_ID2);
-    receiveData(c);
-  }
+  // while (uart_is_readable(UART_ID2)){
+  //   char c = uart_getc(UART_ID2);
+  //   receiveData(c);
+  // }
+
   // current_time = time_us_64();
   // func_time = (current_time - start_time)/1000000.0;
   // printf("%9.6f \n", func_time);

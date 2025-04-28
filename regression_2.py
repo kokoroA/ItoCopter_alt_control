@@ -47,7 +47,7 @@ while True:
         #data_send = [x_zure,theta_left]
         #data_bytes = struct.pack('ii',*data_send)
         #uart.write(str((x_zure, theta_left)).encode() + b'\n')  # データを文字列として送信
-        uart.write(str((x_zure, theta_left)).encode())  # データを文字列として送信
+        uart.write(str((x_zure,theta_left,gap_number)).encode())  # データを文字列として送信
         #uart.write(ustruct.pack('B',x_zure))
 
         print("FPS %f, mag = %s, ずれ = %s, angle = %s" % (clock.fps(), str(line.magnitude()), x_zure, theta_left))

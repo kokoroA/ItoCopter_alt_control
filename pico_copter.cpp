@@ -31,8 +31,8 @@ int main(void)
 
   //Initilize Control
   control_init();
-  // Kalman_init();
-  // initialize_Altitude();
+  Kalman_init();
+  initialize_Altitude();
 
   //Initialize PWM
   //Start 400Hz Interval
@@ -76,7 +76,7 @@ int main(void)
     //   //printf("lotated_distance : %9.6f\n",lotated_distance);
     //   //printf("Altitude  : %9.6f\n",mu_Yn_est(1,0));
     //   // printf("velocity  : %9.6f\n",mu_Yn_est(0,0));
-    //   printf("%9.6f %4d \n",(current_t-start_t)/1000000.0,distance);
+    //   //printf("%9.6f %4d \n",(current_t-start_t)/1000000.0,distance);
     //   // printf("Ax  : %9.6f\n",z_acc+ 9.80665);
     //   // printf("z_acc  : %9.6f\n",z_acc);
     //   // printf("%9.6f %9.6f\n",(current_t-start_t)/1000000.0,input);

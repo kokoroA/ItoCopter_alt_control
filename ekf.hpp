@@ -107,11 +107,11 @@ float initialize( Matrix<float, 2 ,2> &Sigma_Yn_est,
 //                     Matrix<float, 1,1> &yn_mat,
 //                     float &error,float &r,float &last_error,float &Control_T,float &de,float &ie);
 float Kalman_PID(float observe_y,float Ax);
-float Kalman_y_mat(float camera_y,float camera_psi);
+//float Kalman_y_mat(float camera_y,float camera_psi);
 float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float deltaR,float deltaPhi);
 //float Kalman_holizontal(float camera_y,float camera_psi);
 float alt_PID(float ref_alt);
 // float Kalman_PID(float observe_y,float Ax);
 void Kalman_init(void);
-void Kalman_init_v(void);
+// void Kalman_init_v(void);
 #endif

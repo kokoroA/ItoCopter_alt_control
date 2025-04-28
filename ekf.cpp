@@ -83,12 +83,14 @@ float observe_y;
 // float Kp = 0.1;
 float Kp = 0.08;
 // float Ki = 900;//400Hz
-float Ki = 112.5;//50Hz
+//float Ki = 120;//57 58 Hz    129  128.571 128 125
+float Ki = 112.5;//50Hz 112.5 
 float Kd = 0;
 // float Kp_v = 0.08;
 float Kp_v = 0.003;
 // float Ki_v = 300;//400Hz
-float Ki_v = 37.5;//50Hz
+//float Ki_v = 30;//57 58Hz    43 42.857 42 39
+float Ki_v = 37.5;//50Hz 37.5 
 float Kd_v = 0;
 float u = 0;
 float u_v = 0;
@@ -288,7 +290,7 @@ float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float delta
 
   //誤差共分散の予測
   p11_pre = (f11 * f11 * p11_est) + q1;
-  p12_pre = (f11 * f21 * p12_est) + (f21 * p12_est) + (f11 * f23 * p13_est) ;
+  p12_pre = (f11 * f21 * p11_est) + (f11 * p12_est) + (f11 * f23 * p13_est) ;
   p13_pre = f11 * p13_est;
   p21_pre = f11 * ((f21 * p11_est) + p21_est + (f23 * p31_est));
   p22_pre = f21 * ((f21 * p11_est) + p21_est + (f23 * p31_est)) + (f21 * p12_est) + p22_est + (f23 * p32_est) + (f23 * ((f21 * p13_est) + p23_est + (f23 * p33_est))) + q2; 
@@ -311,10 +313,10 @@ float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float delta
   e2 = camera_psi - Xn_pre_3;
 
   //カルマンゲインの計算
-  s11 = r1 - p22_est;
-  s12 = -p23_pre;
-  s21 = -p32_pre;
-  s22 = r2 - p33_pre;
+  s11 = r1 + p22_est;
+  s12 = p23_pre;
+  s21 = p32_pre;
+  s22 = r2 + p33_pre;
   s_i11 = s22 / (s11*s22 - s12*s21);
   s_i12 = -s12 / (s11*s22 - s12*s21);
   s_i21 = -s21 / (s11*s22 - s12*s21);
@@ -391,6 +393,7 @@ float Kalman_holizontal(float camera_y,float camera_psi,float deltaP,float delta
 //     // return mu_Yn_est(1,0);
 //     return 1;
 // }
+
 float Kalman_PID(float observe_y,float Ax)
 // float Kalman_PID(float observe_y,float Ax)
 {
@@ -408,8 +411,8 @@ float Kalman_PID(float observe_y,float Ax)
     Sigma_Yn_est = (unit_mat - (K * observation_mat)) * Sigma_Yn_pre;
     
     // return u_v;
-    // return mu_Yn_est(1,0);
-    return 1;
+    return mu_Yn_est(1,0);
+    //return 1;
 }
 
 float alt_PID(float ref_alt){
